@@ -46,6 +46,11 @@ fun List<String>.toVirtualFilesList(): List<VirtualFile> {
         .mapNotNull { fs.findFileByPath(it) }
 }
 
+internal fun hasUnresolvedPaths(
+    paths: List<String>,
+    resolve: (String) -> VirtualFile? = { LocalFileSystem.getInstance().findFileByPath(it) },
+): Boolean = paths.any { it.isBlank() || resolve(it) == null }
+
 fun List<VirtualFile>.toPathsList(): List<String> =
     filter { it.exists() }
         .map { it.path }
@@ -53,12 +58,13 @@ fun List<VirtualFile>.toPathsList(): List<String> =
 private val SHOWN_PROBLEMS_KEY = Key.create<List<String>>("detekt.shownProblems")
 
 fun showNotificationOnce(problems: List<String>, project: Project) {
-    val isNew = synchronized(SHOWN_PROBLEMS_KEY) {
-        val changed = project.getUserData(SHOWN_PROBLEMS_KEY) != problems
-        if (changed) project.putUserData(SHOWN_PROBLEMS_KEY, problems)
-        changed
-    }
-    if (isNew) showNotification(problems, project)
+    if (markProblemsShown(problems, project)) showNotification(problems, project)
+}
+
+internal fun markProblemsShown(problems: List<String>, project: Project): Boolean = synchronized(SHOWN_PROBLEMS_KEY) {
+    val changed = project.getUserData(SHOWN_PROBLEMS_KEY) != problems
+    if (changed) project.putUserData(SHOWN_PROBLEMS_KEY, problems)
+    changed
 }
 
 fun clearShownProblems(project: Project) {

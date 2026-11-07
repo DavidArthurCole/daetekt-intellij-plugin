@@ -54,7 +54,7 @@ class DetektAnnotator : ExternalAnnotator<PsiFile, List<Finding>>() {
         val settings = file.project.service<DetektPluginSettings>()
         val hasCustomConfig = settings.configurationFilePaths.isNotEmpty()
         for (finding in annotationResult) {
-            val textRange = finding.charPosition.toTextRange(file.textRange)
+            val textRange = finding.charPosition.toTextRangeWithin(file.textRange)
             val message = buildString {
                 append("detekt - ")
                 append(finding.id)
@@ -94,13 +94,13 @@ class DetektAnnotator : ExternalAnnotator<PsiFile, List<Finding>>() {
             SeverityLevel.INFO -> HighlightSeverity.WEAK_WARNING
         }
     }
+}
 
-    private fun TextLocation.toTextRange(fileRange: TextRange): TextRange {
-        val endOffset = end.coerceIn(fileRange.startOffset, fileRange.endOffset)
-        val startOffset = start.coerceIn(fileRange.startOffset, endOffset)
-        if (startOffset == endOffset && startOffset > fileRange.startOffset) {
-            return TextRange.create(startOffset - 1, endOffset)
-        }
-        return TextRange.create(startOffset, endOffset)
+internal fun TextLocation.toTextRangeWithin(fileRange: TextRange): TextRange {
+    val endOffset = end.coerceIn(fileRange.startOffset, fileRange.endOffset)
+    val startOffset = start.coerceIn(fileRange.startOffset, endOffset)
+    if (startOffset == endOffset && startOffset > fileRange.startOffset) {
+        return TextRange.create(startOffset - 1, endOffset)
     }
+    return TextRange.create(startOffset, endOffset)
 }

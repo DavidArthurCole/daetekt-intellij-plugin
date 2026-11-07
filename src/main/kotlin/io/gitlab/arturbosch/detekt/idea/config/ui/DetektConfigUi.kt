@@ -19,6 +19,7 @@ import com.intellij.ui.dsl.gridLayout.VerticalAlign
 import com.intellij.ui.layout.selected
 import io.gitlab.arturbosch.detekt.idea.DetektBundle
 import io.gitlab.arturbosch.detekt.idea.config.DetektPluginSettings
+import io.gitlab.arturbosch.detekt.idea.util.hasUnresolvedPaths
 import io.gitlab.arturbosch.detekt.idea.util.toPathsList
 import io.gitlab.arturbosch.detekt.idea.util.toVirtualFilesList
 import io.gitlab.arturbosch.detekt.idea.util.validateAsFilePath
@@ -211,6 +212,7 @@ internal class DetektConfigUi(
                 { fileListProperty.set(it.toPathsList()) }
             )
         )
+        onIsModified { hasUnresolvedPaths(fileListProperty.get()) }
     }
 
     private val JCheckBox.selectedProperty: ObservableProperty<Boolean>

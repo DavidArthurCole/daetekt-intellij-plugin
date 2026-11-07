@@ -26,6 +26,9 @@ import java.nio.file.Paths
 import kotlin.io.path.Path
 import kotlin.io.path.exists
 
+internal fun analysisBasePath(projectDir: Path?, input: Path): Path? =
+    projectDir?.let { if (it.root == input.root) it else input.parent }
+
 class ConfiguredService(private val project: Project) {
 
     private val logger = logger<ConfiguredService>()
@@ -55,8 +58,7 @@ class ConfiguredService(private val project: Project) {
     private fun settings(filename: String, autoCorrect: Boolean) = ProcessingSpec {
         project {
             val inputPath = Paths.get(filename)
-            val projectPath = project.guessProjectDir()?.canonicalPath?.let { Paths.get(it) }
-            basePath = projectPath?.takeIf { inputPath.root == it.root } ?: inputPath.parent
+            basePath = analysisBasePath(project.guessProjectDir()?.canonicalPath?.let { Paths.get(it) }, inputPath)
             inputPaths = listOf(inputPath)
         }
         rules {
@@ -113,9 +115,7 @@ class ConfiguredService(private val project: Project) {
     private fun baseline(): Path? = absoluteBaselinePath(project, settings)
 
     fun execute(file: PsiFile, autoCorrect: Boolean): List<Finding> {
-        val virtualFile = file.virtualFile ?: return emptyList()
-        if (!virtualFile.isInLocalFileSystem) return emptyList()
-        val pathToAnalyze = virtualFile.canonicalPath ?: return emptyList()
+        val pathToAnalyze = file.virtualFile?.canonicalPath ?: return emptyList()
         if (!Files.isRegularFile(Path(pathToAnalyze))) return emptyList()
         val content = runCatching { runReadAction { file.text } }
             .onFailure {
@@ -140,7 +140,7 @@ class ConfiguredService(private val project: Project) {
     @OptIn(UnstableApi::class)
     fun execute(fileContent: String, filename: String, autoCorrect: Boolean): List<Finding> {
         val normalizedFilename = filename.replace('\\', '/')
-        if (SPECIAL_FILES_TO_IGNORE.any { normalizedFilename == it || normalizedFilename.startsWith(it) }) {
+        if (SPECIAL_FILES_TO_IGNORE.any { normalizedFilename.startsWith(it) }) {
             return emptyList()
         }
 

@@ -75,4 +75,12 @@ class ConfiguredServiceTest : MockProjectTestCase() {
         assertThat(service.execute("", SPECIAL_FILENAME_FOR_DEBUGGING, false)).isEmpty()
         assertThat(service.execute("", SPECIAL_FILENAME_AI_SNIPPED, false)).isEmpty()
     }
+
+    @Test
+    fun aiAssistantSnippetWithWindowsPathIsSkipped() {
+        val service = ConfiguredService(project)
+
+        assertThat(service.execute("val x = 1", "\\AIAssistantSnippet..", false)).isEmpty()
+        assertThat(service.execute("val x = 1", "\\AIAssistantSnippet.kt", false)).isEmpty()
+    }
 }
