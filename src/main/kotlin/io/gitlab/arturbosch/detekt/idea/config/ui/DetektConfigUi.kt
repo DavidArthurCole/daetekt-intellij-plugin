@@ -113,7 +113,31 @@ internal class DetektConfigUi(
             pluginJarsRow(isEnabled)
 
             pluginJarsDirectoryRow()
+
+            fixTemplatesRow()
         }
+
+    private fun Panel.fixTemplatesRow() {
+        row(DetektBundle.message("detekt.configuration.fixTemplates.title")) {
+            cell(
+                browseField(
+                    FileChooserDescriptorUtil.createYamlChooserDescriptor()
+                        .withTitle(DetektBundle.message("detekt.configuration.fixTemplates.dialog.title"))
+                )
+            )
+                .bindText(
+                    getter = { LocalFileSystem.getInstance().extractPresentableUrl(settings.fixTemplatesPath) },
+                    setter = { settings.fixTemplatesPath = it.trim().replace('\\', '/') }
+                )
+                .align(AlignX.FILL)
+                .resizableColumn()
+                .validationOnInput { validateAsFilePath(it.text.trim(), isWarning = true) }
+        }
+
+        row("") {
+            comment(DetektBundle.message("detekt.configuration.fixTemplates.comment"))
+        }.bottomGap(BottomGap.MEDIUM)
+    }
 
     private fun Panel.configurationFilesRow(isEnabled: ObservableProperty<Boolean>) {
         row {

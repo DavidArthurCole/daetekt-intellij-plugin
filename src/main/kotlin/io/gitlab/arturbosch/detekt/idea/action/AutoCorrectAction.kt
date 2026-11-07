@@ -14,7 +14,7 @@ import io.gitlab.arturbosch.detekt.idea.ConfiguredService
 import io.gitlab.arturbosch.detekt.idea.DetektBundle
 import io.gitlab.arturbosch.detekt.idea.KOTLIN_FILE_EXTENSIONS
 import io.gitlab.arturbosch.detekt.idea.util.PluginUtils
-import io.gitlab.arturbosch.detekt.idea.util.isFormattingEnabled
+import io.gitlab.arturbosch.detekt.idea.util.isDetektEnabled
 import io.gitlab.arturbosch.detekt.idea.util.showNotification
 
 class AutoCorrectAction : AnAction(PluginUtils.pluginIcon()) {
@@ -30,7 +30,7 @@ class AutoCorrectAction : AnAction(PluginUtils.pluginIcon()) {
             project != null &&
             !file.fileSystem.isReadOnly &&
             file.extension in KOTLIN_FILE_EXTENSIONS &&
-            project.isFormattingEnabled()
+            project.isDetektEnabled()
     }
 
     override fun actionPerformed(event: AnActionEvent) {

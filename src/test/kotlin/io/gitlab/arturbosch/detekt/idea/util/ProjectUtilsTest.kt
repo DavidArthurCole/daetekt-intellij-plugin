@@ -1,9 +1,7 @@
 package io.gitlab.arturbosch.detekt.idea.util
 
 import com.intellij.mock.MockVirtualFile
-import com.intellij.openapi.components.service
 import io.gitlab.arturbosch.detekt.idea.MockProjectTestCase
-import io.gitlab.arturbosch.detekt.idea.config.DetektPluginSettings
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -13,22 +11,6 @@ class ProjectUtilsTest : MockProjectTestCase() {
     @BeforeEach
     fun resetShownProblems() {
         clearShownProblems(project)
-    }
-
-    @Test
-    fun formattingIsOffWhenOnlyDetektIsEnabled() {
-        project.service<DetektPluginSettings>().enableDetekt = true
-
-        assertThat(project.isFormattingEnabled()).isFalse()
-    }
-
-    @Test
-    fun formattingIsOnWhenDetektAndFormattingAreEnabled() {
-        val settings = project.service<DetektPluginSettings>()
-        settings.enableDetekt = true
-        settings.enableFormatting = true
-
-        assertThat(project.isFormattingEnabled()).isTrue()
     }
 
     @Test

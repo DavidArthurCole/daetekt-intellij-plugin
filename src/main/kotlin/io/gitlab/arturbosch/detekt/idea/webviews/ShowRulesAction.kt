@@ -8,6 +8,6 @@ class ShowRulesAction : AnAction(PluginUtils.pluginIcon()) {
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        showPage(DocsPage.Rules, project)
+        showRules(project)
     }
 }

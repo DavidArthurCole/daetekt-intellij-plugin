@@ -37,8 +37,6 @@ fun restartAnalysis(project: Project) {
         .forEach { analyzer.restart(it) }
 }
 
-fun Project.isFormattingEnabled(): Boolean = settings().run { enableDetekt && enableFormatting }
-
 fun absolutePath(project: Project, path: String): String {
     if (path.isBlank() || File(path).isAbsolute) return path
 

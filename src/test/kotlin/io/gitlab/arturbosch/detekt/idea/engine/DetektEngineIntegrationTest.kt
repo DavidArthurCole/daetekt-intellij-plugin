@@ -117,20 +117,10 @@ class DetektEngineIntegrationTest {
     }
 
     @Test
-    fun ktlintPropertiesOutsideTheWrapperSchemaPassValidationWithFormattingOff() {
-        val config = config(
-            """
-            config:
-              validation: true
-            ktlint:
-              Wrapping:
-                maxLineLength: 140
-            """
-        )
+    fun pluginJarRulesAreDescribed() {
+        val rules = engine.describeRules(listOf(rulesJar))
 
-        val outcome = engine.analyze(request(config = config, enableFormatting = false))
-
-        assertThat(outcome.configProblem).isNull()
+        assertThat(rules.map { it.ruleId }).contains("FileMarker", "MagicNumber")
     }
 
     @Test

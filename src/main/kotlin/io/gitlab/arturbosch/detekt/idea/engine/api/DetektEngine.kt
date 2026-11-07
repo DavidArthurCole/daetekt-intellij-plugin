@@ -10,7 +10,26 @@ interface DetektEngine {
     fun analyze(request: AnalysisRequest): AnalysisOutcome
 
     fun suppressInBaseline(baseline: Path, baselineId: String)
+
+    fun describeRules(pluginPaths: List<Path>): List<RuleDescription>
+
+    fun loadFixTemplates(path: Path): Map<String, List<FixTemplate>>
 }
+
+class FixTemplate(
+    val find: String,
+    val replace: String,
+    val ignoreCase: Boolean,
+)
+
+class RuleDescription(
+    val ruleSetId: String,
+    val ruleId: String,
+    val description: String,
+    val url: String?,
+    val requiresTypeResolution: Boolean,
+    val source: String?,
+)
 
 class AnalysisRequest(
     val content: String,

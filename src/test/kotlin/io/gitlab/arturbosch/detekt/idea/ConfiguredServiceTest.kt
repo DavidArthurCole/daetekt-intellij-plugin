@@ -71,19 +71,19 @@ class ConfiguredServiceTest : MockProjectTestCase() {
 
     @Test
     fun everyJarInPluginDirectoryReachesTheEngineAlongsideExplicitJars(@TempDir dir: Path) {
-        val pluginDir = dir.resolve("detekt-ide-plugins").createDirectories()
-        val rules = pluginDir.resolve("skyhanni-rules.jar").createFile()
-        val neu = pluginDir.resolve("detektrules-1.0.0.jar").createFile()
-        pluginDir.resolve("README.txt").createFile()
-        val explicit = dir.resolve("extra.jar").createFile()
+        val pluginDir = dir.resolve("plugins").createDirectories()
+        val first = pluginDir.resolve("a.jar").createFile()
+        val second = pluginDir.resolve("b.jar").createFile()
+        pluginDir.resolve("notes.txt").createFile()
+        val explicit = dir.resolve("c.jar").createFile()
         val settings = project.service<DetektPluginSettings>()
         settings.pluginJarsDirectory = pluginDir.toString()
-        settings.pluginJarPaths = listOf(explicit.toString(), rules.toString())
+        settings.pluginJarPaths = listOf(explicit.toString(), first.toString())
         val engine = FakeDetektEngine()
 
         ConfiguredService(project, engine).execute("val x = 1", "Main.kt", autoCorrect = false)
 
-        assertThat(engine.requests.single().pluginPaths).containsExactlyInAnyOrder(explicit, rules, neu)
+        assertThat(engine.requests.single().pluginPaths).containsExactlyInAnyOrder(explicit, first, second)
     }
 
     @Test

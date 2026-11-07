@@ -10,37 +10,51 @@ import io.gitlab.arturbosch.detekt.idea.config.DetektPluginSettings
 import io.gitlab.arturbosch.detekt.idea.engine.api.EngineFinding
 import io.gitlab.arturbosch.detekt.idea.engine.api.EngineSeverity
 import io.gitlab.arturbosch.detekt.idea.engine.api.KTLINT_RULE_SET_ID
+import io.gitlab.arturbosch.detekt.idea.engine.api.FixTemplate
 import io.gitlab.arturbosch.detekt.idea.intention.AddToBaselineAction
+import io.gitlab.arturbosch.detekt.idea.intention.ApplyFixTemplateAction
 import io.gitlab.arturbosch.detekt.idea.intention.AutoCorrectIntention
+import io.gitlab.arturbosch.detekt.idea.intention.editWithin
 import io.gitlab.arturbosch.detekt.idea.util.clearShownProblems
 import io.gitlab.arturbosch.detekt.idea.util.isDetektEnabled
 import io.gitlab.arturbosch.detekt.idea.util.showNotificationOnce
 
-class DetektAnnotator : ExternalAnnotator<PsiFile, List<EngineFinding>>() {
+class DetektAnnotations(
+    val findings: List<EngineFinding>,
+    val templates: Map<String, List<FixTemplate>>,
+) {
+
+    companion object {
+        val EMPTY = DetektAnnotations(emptyList(), emptyMap())
+    }
+}
+
+class DetektAnnotator : ExternalAnnotator<PsiFile, DetektAnnotations>() {
 
     override fun collectInformation(file: PsiFile): PsiFile = file
 
-    override fun doAnnotate(collectedInfo: PsiFile): List<EngineFinding> {
+    override fun doAnnotate(collectedInfo: PsiFile): DetektAnnotations {
         val project = collectedInfo.project
         if (!project.isDetektEnabled() || !isKotlinFile(collectedInfo)) {
-            return emptyList()
+            return DetektAnnotations.EMPTY
         }
 
         val service = ConfiguredService(project)
         val problems = service.validate()
         if (problems.isNotEmpty()) {
             showNotificationOnce(problems, project)
-            return emptyList()
+            return DetektAnnotations.EMPTY
         }
 
         val outcome = service.execute(collectedInfo, autoCorrect = false)
         val configProblem = outcome.configProblem
         if (configProblem != null) {
             showNotificationOnce(listOf(configProblem), project)
-            return emptyList()
+            return DetektAnnotations.EMPTY
         }
         clearShownProblems(project)
-        return outcome.findings
+        val templates = if (outcome.findings.isEmpty()) emptyMap() else service.fixTemplates()
+        return DetektAnnotations(outcome.findings, templates)
     }
 
     private fun isKotlinFile(psiFile: PsiFile): Boolean =
@@ -49,12 +63,13 @@ class DetektAnnotator : ExternalAnnotator<PsiFile, List<EngineFinding>>() {
 
     override fun apply(
         file: PsiFile,
-        annotationResult: List<EngineFinding>,
+        annotationResult: DetektAnnotations,
         holder: AnnotationHolder,
     ) {
         val settings = file.project.service<DetektPluginSettings>()
         val hasCustomConfig = settings.configurationFilePaths.isNotEmpty()
-        for (finding in annotationResult) {
+        val text = file.viewProvider.document?.charsSequence ?: file.text
+        for (finding in annotationResult.findings) {
             val textRange = finding.toTextRangeWithin(file.textRange)
             val message = "detekt - ${finding.ruleId}: ${finding.message}"
             val severity = highlightSeverity(finding.severity, hasCustomConfig, settings.treatAsErrors)
@@ -64,9 +79,12 @@ class DetektAnnotator : ExternalAnnotator<PsiFile, List<EngineFinding>>() {
                 annotationBuilder.fileLevel()
             }
 
-            if (finding.ruleSetId == KTLINT_RULE_SET_ID) {
-                annotationBuilder.withFix(AutoCorrectIntention())
-            } else {
+            for (template in annotationResult.templates[finding.ruleId].orEmpty()) {
+                val edit = template.editWithin(text, textRange.startOffset, textRange.endOffset) ?: continue
+                annotationBuilder.withFix(ApplyFixTemplateAction(template, textRange, edit.original))
+            }
+            annotationBuilder.withFix(AutoCorrectIntention())
+            if (finding.ruleSetId != KTLINT_RULE_SET_ID) {
                 annotationBuilder.withFix(AddToBaselineAction(finding))
             }
 

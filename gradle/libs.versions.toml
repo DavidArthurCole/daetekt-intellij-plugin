@@ -6,13 +6,15 @@ assertj = "3.27.6"
 junit5 = "5.14.2"
 junit5Platform = "1.14.2"
 junit4 = "4.13.2"
+snakeyamlEngine = "2.10"
 
 [libraries]
 detekt-api = { group = "dev.detekt", name = "detekt-api", version.ref = "detekt" }
 detekt-tooling = { group = "dev.detekt", name = "detekt-tooling", version.ref = "detekt" }
 detekt-cli = { group = "dev.detekt", name = "detekt-cli", version.ref = "detekt" }
 detekt-ktlintWrapper = { group = "dev.detekt", name = "detekt-rules-ktlint-wrapper", version.ref = "detekt" }
-assertj-core = { group = "org.assertj", name = "assertj-core", version.ref = "assertj" }
+snakeyaml-engine = { group = "org.snakeyaml", name = "snakeyaml-engine", version.ref = "snakeyamlEngine" }
+assertj-core ={ group = "org.assertj", name = "assertj-core", version.ref = "assertj" }
 junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junit5" }
 junit-platform = { group = "org.junit.platform", name = "junit-platform-launcher", version.ref = "junit5Platform" }
 junit4 = { group = "junit", name = "junit", version.ref = "junit4" }

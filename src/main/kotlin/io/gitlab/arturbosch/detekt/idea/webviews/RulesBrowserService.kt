@@ -53,7 +53,11 @@ class RulesBrowserService : Disposable {
     fun getComponent(): JComponent = browser.component
 
     fun loadPage(page: DocsPage) {
-        browser.loadURL(page.url)
+        loadUrl(page.url)
+    }
+
+    fun loadUrl(url: String) {
+        browser.loadURL(url)
     }
 
     private fun updateStyles() {

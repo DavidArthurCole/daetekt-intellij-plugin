@@ -28,6 +28,7 @@ dependencies {
     engine.compileOnlyConfigurationName(sourceSets.main.get().output)
     engine.implementationConfigurationName(libs.detekt.api)
     engine.implementationConfigurationName(libs.detekt.tooling)
+    engine.implementationConfigurationName(libs.snakeyaml.engine)
     engine.runtimeOnlyConfigurationName(libs.detekt.cli)
     engine.runtimeOnlyConfigurationName(libs.detekt.ktlintWrapper)
 

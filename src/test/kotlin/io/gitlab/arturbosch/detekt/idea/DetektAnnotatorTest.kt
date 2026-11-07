@@ -33,11 +33,11 @@ class DetektAnnotatorTest : KotlinParsingTestCase() {
         val psi = parseFile(moved)
         moved.deleteExisting()
 
-        assertThat(DetektAnnotator().doAnnotate(psi)).isEmpty()
+        assertThat(DetektAnnotator().doAnnotate(psi).findings).isEmpty()
     }
 
     private fun runAnnotator(enabled: Boolean): List<EngineFinding> {
         project.service<DetektPluginSettings>().enableDetekt = enabled
-        return DetektAnnotator().doAnnotate(parseFile(poko))
+        return DetektAnnotator().doAnnotate(parseFile(poko)).findings
     }
 }

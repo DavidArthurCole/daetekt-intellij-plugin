@@ -78,6 +78,12 @@ class DetektPluginSettings(
             state.pluginJarsDirectory = value
         }
 
+    var fixTemplatesPath: String
+        get() = state.fixTemplatesPath.orEmpty()
+        set(value) {
+            state.fixTemplatesPath = value
+        }
+
     var debug: Boolean
         get() = state.detektDebugMode
         set(value) {
@@ -124,6 +130,7 @@ class DetektPluginSettings(
         var baselinePath by string()
         var pluginJars by list<String>()
         var pluginJarsDirectory by string()
+        var fixTemplatesPath by string()
 
         //////////////////////////////////
         //// Deprecated v2 properties ////

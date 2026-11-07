@@ -13,6 +13,8 @@ import io.gitlab.arturbosch.detekt.idea.engine.EngineLoader
 import io.gitlab.arturbosch.detekt.idea.engine.api.AnalysisOutcome
 import io.gitlab.arturbosch.detekt.idea.engine.api.AnalysisRequest
 import io.gitlab.arturbosch.detekt.idea.engine.api.DetektEngine
+import io.gitlab.arturbosch.detekt.idea.engine.api.FixTemplate
+import io.gitlab.arturbosch.detekt.idea.engine.api.RuleDescription
 import io.gitlab.arturbosch.detekt.idea.util.DirectExecutor
 import io.gitlab.arturbosch.detekt.idea.util.SimpleAppendable
 import io.gitlab.arturbosch.detekt.idea.util.absoluteBaselinePath
@@ -126,6 +128,16 @@ class ConfiguredService(
             .map { projectBasePath?.resolve(it) ?: Paths.get(it) }
 
     private fun baseline(): Path? = absoluteBaselinePath(project, settings)
+
+    fun describeRules(): List<RuleDescription> = engine.describeRules(pluginPaths())
+
+    fun fixTemplates(): Map<String, List<FixTemplate>> {
+        val path = sequenceOf(settings.fixTemplatesPath).filter { it.isNotBlank() }.asAbsolutePaths().firstOrNull()
+        if (path == null || !Files.isRegularFile(path)) return emptyMap()
+        return runCatching { engine.loadFixTemplates(path) }
+            .onFailure { logger.warn("Could not read fix templates from $path", it) }
+            .getOrDefault(emptyMap())
+    }
 
     fun suppressInBaseline(baselineId: String) {
         engine.suppressInBaseline(requireNotNull(baseline()), baselineId)
