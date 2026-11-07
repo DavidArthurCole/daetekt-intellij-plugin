@@ -6,8 +6,8 @@ import com.intellij.openapi.fileChooser.FileChooserDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.NlsContexts.DialogTitle
 import com.intellij.openapi.util.NlsContexts.Label
-import com.intellij.openapi.vcs.changes.ui.VirtualFileListCellRenderer
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.ui.SimpleListCellRenderer
 import com.intellij.ui.ToolbarDecorator
 import com.intellij.ui.components.JBList
 import javax.swing.DefaultListModel
@@ -26,7 +26,10 @@ internal class FilesListPanel(
     private val list = JBList(listModel).apply {
         dragEnabled = true
         selectionModel.selectionMode = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION
-        cellRenderer = VirtualFileListCellRenderer(project)
+        cellRenderer = SimpleListCellRenderer.create<VirtualFile> { label, file, _ ->
+            label.text = file?.presentableUrl.orEmpty()
+            label.icon = file?.fileType?.icon
+        }
     }
 
     fun decorated(): JPanel =

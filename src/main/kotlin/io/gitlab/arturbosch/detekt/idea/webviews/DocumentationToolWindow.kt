@@ -13,10 +13,10 @@ class DocumentationToolWindow : ToolWindowFactory, DumbAware {
         const val ID = "detekt doc"
     }
 
-    override fun shouldBeAvailable(project: Project): Boolean = JBCefApp.isSupported()
+    override fun shouldBeAvailable(project: Project): Boolean = isJcefSupported()
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
-        val content = if (JBCefApp.isSupported()) {
+        val content = if (isJcefSupported()) {
             val browser = RulesBrowserService.getInstance()
             toolWindow.contentManager.factory
                 .createContent(browser.getComponent(), null, false)
@@ -32,3 +32,5 @@ class DocumentationToolWindow : ToolWindowFactory, DumbAware {
         toolWindow.contentManager.addContent(content)
     }
 }
+
+internal fun isJcefSupported(): Boolean = runCatching { JBCefApp.isSupported() }.getOrDefault(false)

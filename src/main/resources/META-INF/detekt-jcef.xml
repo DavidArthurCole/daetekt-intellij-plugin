@@ -1,0 +1,17 @@
+<idea-plugin>
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow id="detekt doc"
+                    factoryClass="io.gitlab.arturbosch.detekt.idea.webviews.DocumentationToolWindow"
+                    anchor="right"
+                    icon="DetektIcons.DocsToolWindow"/>
+    </extensions>
+
+    <actions>
+        <action id="io.gitlab.arturbosch.detekt.idea.webviews.ShowRulesAction"
+                class="io.gitlab.arturbosch.detekt.idea.webviews.ShowRulesAction"
+                text="Show detekt Rules Documentation"/>
+        <action id="io.gitlab.arturbosch.detekt.idea.webviews.ShowChangelogAction"
+                class="io.gitlab.arturbosch.detekt.idea.webviews.ShowChangelogAction"
+                text="Show detekt Changelog"/>
+    </actions>
+</idea-plugin>

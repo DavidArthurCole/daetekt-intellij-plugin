@@ -9,6 +9,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.options.newEditor.SettingsDialog
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Key
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.layout.ValidationInfoBuilder
@@ -25,7 +26,7 @@ fun Project.settings(): DetektPluginSettings = service<DetektPluginSettings>()
 
 fun Project.isDetektEnabled(): Boolean = settings().enableDetekt
 
-fun Project.isFormattingEnabled(): Boolean = settings().enableDetekt
+fun Project.isFormattingEnabled(): Boolean = settings().run { enableDetekt && enableFormatting }
 
 fun absolutePath(project: Project, path: String): String {
     if (path.isBlank() || File(path).isAbsolute) return path
@@ -48,6 +49,21 @@ fun List<String>.toVirtualFilesList(): List<VirtualFile> {
 fun List<VirtualFile>.toPathsList(): List<String> =
     filter { it.exists() }
         .map { it.path }
+
+private val SHOWN_PROBLEMS_KEY = Key.create<List<String>>("detekt.shownProblems")
+
+fun showNotificationOnce(problems: List<String>, project: Project) {
+    val isNew = synchronized(SHOWN_PROBLEMS_KEY) {
+        val changed = project.getUserData(SHOWN_PROBLEMS_KEY) != problems
+        if (changed) project.putUserData(SHOWN_PROBLEMS_KEY, problems)
+        changed
+    }
+    if (isNew) showNotification(problems, project)
+}
+
+fun clearShownProblems(project: Project) {
+    project.putUserData(SHOWN_PROBLEMS_KEY, null)
+}
 
 fun showNotification(problems: List<String>, project: Project) {
     showNotification(

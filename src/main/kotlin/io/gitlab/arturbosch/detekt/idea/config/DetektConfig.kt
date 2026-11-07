@@ -7,6 +7,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogPanel
 import io.gitlab.arturbosch.detekt.idea.DetektBundle
 import io.gitlab.arturbosch.detekt.idea.config.ui.DetektConfigUi
+import io.gitlab.arturbosch.detekt.idea.util.clearShownProblems
 
 class DetektConfig(private val project: Project) : BoundSearchableConfigurable(
     displayName = DetektBundle.message("detekt.configuration.title"),
@@ -22,6 +23,7 @@ class DetektConfig(private val project: Project) : BoundSearchableConfigurable(
 
     override fun apply() {
         super.apply()
+        clearShownProblems(project)
         DaemonCodeAnalyzer.getInstance(project).restart()
     }
 }

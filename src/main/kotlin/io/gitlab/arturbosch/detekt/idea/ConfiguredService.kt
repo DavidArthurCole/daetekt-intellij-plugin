@@ -54,8 +54,10 @@ class ConfiguredService(private val project: Project) {
 
     private fun settings(filename: String, autoCorrect: Boolean) = ProcessingSpec {
         project {
-            basePath = project.guessProjectDir()?.canonicalPath?.let { Paths.get(it) }
-            inputPaths = listOf(Paths.get(filename))
+            val inputPath = Paths.get(filename)
+            val projectPath = project.guessProjectDir()?.canonicalPath?.let { Paths.get(it) }
+            basePath = projectPath?.takeIf { inputPath.root == it.root } ?: inputPath.parent
+            inputPaths = listOf(inputPath)
         }
         rules {
             this.autoCorrect = autoCorrect
@@ -111,9 +113,10 @@ class ConfiguredService(private val project: Project) {
     private fun baseline(): Path? = absoluteBaselinePath(project, settings)
 
     fun execute(file: PsiFile, autoCorrect: Boolean): List<Finding> {
-        val pathToAnalyze = file.virtualFile
-            ?.canonicalPath
-            ?: return emptyList()
+        val virtualFile = file.virtualFile ?: return emptyList()
+        if (!virtualFile.isInLocalFileSystem) return emptyList()
+        val pathToAnalyze = virtualFile.canonicalPath ?: return emptyList()
+        if (!Files.isRegularFile(Path(pathToAnalyze))) return emptyList()
         val content = runCatching { runReadAction { file.text } }
             .onFailure {
                 logErrorIfAllowed(
@@ -136,7 +139,8 @@ class ConfiguredService(private val project: Project) {
 
     @OptIn(UnstableApi::class)
     fun execute(fileContent: String, filename: String, autoCorrect: Boolean): List<Finding> {
-        if (filename in SPECIAL_FILES_TO_IGNORE) {
+        val normalizedFilename = filename.replace('\\', '/')
+        if (SPECIAL_FILES_TO_IGNORE.any { normalizedFilename == it || normalizedFilename.startsWith(it) }) {
             return emptyList()
         }
 

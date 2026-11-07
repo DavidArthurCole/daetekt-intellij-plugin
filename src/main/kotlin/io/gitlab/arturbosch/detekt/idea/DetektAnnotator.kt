@@ -13,8 +13,9 @@ import io.gitlab.arturbosch.detekt.api.TextLocation
 import io.gitlab.arturbosch.detekt.idea.config.DetektPluginSettings
 import io.gitlab.arturbosch.detekt.idea.intention.AddToBaselineAction
 import io.gitlab.arturbosch.detekt.idea.intention.AutoCorrectIntention
+import io.gitlab.arturbosch.detekt.idea.util.clearShownProblems
 import io.gitlab.arturbosch.detekt.idea.util.isDetektEnabled
-import io.gitlab.arturbosch.detekt.idea.util.showNotification
+import io.gitlab.arturbosch.detekt.idea.util.showNotificationOnce
 import org.jetbrains.kotlin.idea.KotlinLanguage
 
 class DetektAnnotator : ExternalAnnotator<PsiFile, List<Finding>>() {
@@ -33,9 +34,10 @@ class DetektAnnotator : ExternalAnnotator<PsiFile, List<Finding>>() {
         val problems = service.validate()
 
         return if (problems.isNotEmpty()) {
-            showNotification(problems, collectedInfo.project)
+            showNotificationOnce(problems, collectedInfo.project)
             emptyList()
         } else {
+            clearShownProblems(collectedInfo.project)
             service.execute(collectedInfo, autoCorrect = false)
         }
     }
@@ -52,7 +54,7 @@ class DetektAnnotator : ExternalAnnotator<PsiFile, List<Finding>>() {
         val settings = file.project.service<DetektPluginSettings>()
         val hasCustomConfig = settings.configurationFilePaths.isNotEmpty()
         for (finding in annotationResult) {
-            val textRange = finding.charPosition.toTextRange()
+            val textRange = finding.charPosition.toTextRange(file.textRange)
             val message = buildString {
                 append("detekt - ")
                 append(finding.id)
@@ -93,5 +95,12 @@ class DetektAnnotator : ExternalAnnotator<PsiFile, List<Finding>>() {
         }
     }
 
-    private fun TextLocation.toTextRange(): TextRange = TextRange.create(start, end)
+    private fun TextLocation.toTextRange(fileRange: TextRange): TextRange {
+        val endOffset = end.coerceIn(fileRange.startOffset, fileRange.endOffset)
+        val startOffset = start.coerceIn(fileRange.startOffset, endOffset)
+        if (startOffset == endOffset && startOffset > fileRange.startOffset) {
+            return TextRange.create(startOffset - 1, endOffset)
+        }
+        return TextRange.create(startOffset, endOffset)
+    }
 }
