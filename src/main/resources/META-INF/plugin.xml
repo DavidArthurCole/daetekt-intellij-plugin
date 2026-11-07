@@ -1,6 +1,6 @@
 <idea-plugin>
-    <id>intellijekt</id>
-    <name>intellijekt</name>
+    <id>daetekt</id>
+    <name>daetekt</name>
     <category>Tools Integration</category>
     <vendor email="arturbosch@gmx.de" url="https://github.com/detekt">
         detekt
@@ -32,12 +32,9 @@
         <problemsViewPanelProvider implementation="io.gitlab.arturbosch.detekt.idea.problems.FindingsView"/>
 
         <iconMapper mappingFile="DetektIconMappings.json"/>
-    </extensions>
 
-    <applicationListeners>
-        <listener class="io.gitlab.arturbosch.detekt.idea.DetektProjectManagerListener"
-                  topic="com.intellij.openapi.project.ProjectManagerListener"/>
-    </applicationListeners>
+        <postStartupActivity implementation="io.gitlab.arturbosch.detekt.idea.DetektProjectManagerListener"/>
+    </extensions>
 
     <actions>
         <action id="io.gitlab.arturbosch.detekt.idea.action.AutoCorrect"

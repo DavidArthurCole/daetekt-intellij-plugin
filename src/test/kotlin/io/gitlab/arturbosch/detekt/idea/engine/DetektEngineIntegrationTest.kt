@@ -19,7 +19,7 @@ class DetektEngineIntegrationTest {
         DetektEngineIntegrationTest::class.java.classLoader,
     )
 
-    private val rulesJar = Path(System.getProperty("intellijekt.test.rulesJar"))
+    private val rulesJar = Path(System.getProperty("daetekt.test.rulesJar"))
 
     @TempDir
     lateinit var dir: Path
@@ -103,7 +103,7 @@ class DetektEngineIntegrationTest {
             """
             config:
               validation: true
-            intellijekt-test:
+            daetekt-test:
               FileMarker:
                 active: true
                 propertyOnlyThePluginKnows: 1
@@ -120,7 +120,7 @@ class DetektEngineIntegrationTest {
     fun configExcludesMatchProjectRelativePath() {
         val config = config(
             """
-            intellijekt-test:
+            daetekt-test:
               FileMarker:
                 active: true
                 excludes: ['**/test/**']
@@ -157,7 +157,7 @@ class DetektEngineIntegrationTest {
 
     private fun activateTestRules(): Path = config(
         """
-        intellijekt-test:
+        daetekt-test:
           FileMarker:
             active: true
           TypeResolvedFileMarker:

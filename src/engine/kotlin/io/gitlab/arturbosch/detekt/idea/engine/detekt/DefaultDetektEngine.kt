@@ -27,7 +27,7 @@ class DefaultDetektEngine : DetektEngine {
     private val provider by lazy { withEngineContext { DetektProvider.load() } }
 
     override fun analyze(request: AnalysisRequest): AnalysisOutcome {
-        val workspace = Files.createTempDirectory("intellijekt-")
+        val workspace = Files.createTempDirectory("daetekt-")
         try {
             val mirror = workspace.resolve(request.relativePath.toString())
             mirror.createParentDirectories()
@@ -83,14 +83,10 @@ class DefaultDetektEngine : DetektEngine {
         execution {
             executorService = request.executor
         }
-        val output = request.outputChannel
-        val errors = request.errorChannel
-        if (output != null && errors != null) {
-            logging {
-                debug = request.debug
-                outputChannel = output
-                errorChannel = errors
-            }
+        logging {
+            debug = request.debug
+            outputChannel = request.outputChannel ?: Silent
+            errorChannel = request.errorChannel ?: Silent
         }
     }
 
@@ -104,6 +100,15 @@ class DefaultDetektEngine : DetektEngine {
             thread.contextClassLoader = previous
         }
     }
+}
+
+private object Silent : Appendable {
+
+    override fun append(csq: CharSequence?): Appendable = this
+
+    override fun append(csq: CharSequence?, start: Int, end: Int): Appendable = this
+
+    override fun append(c: Char): Appendable = this
 }
 
 internal fun Issue.toFinding(): EngineFinding = EngineFinding(

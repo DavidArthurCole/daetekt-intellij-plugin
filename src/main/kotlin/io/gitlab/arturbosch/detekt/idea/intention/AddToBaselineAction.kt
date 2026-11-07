@@ -30,6 +30,6 @@ class AddToBaselineAction(private val finding: EngineFinding) : IntentionAction,
 
     override fun invoke(project: Project, editor: Editor, file: PsiFile) {
         ConfiguredService(project).suppressInBaseline(finding.baselineId)
-        DaemonCodeAnalyzer.getInstance(project).restart()
+        DaemonCodeAnalyzer.getInstance(project).restart(file)
     }
 }

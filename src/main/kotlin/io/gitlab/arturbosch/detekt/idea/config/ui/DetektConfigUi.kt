@@ -1,12 +1,16 @@
 package io.gitlab.arturbosch.detekt.idea.config.ui
 
+import com.intellij.openapi.fileChooser.FileChooserDescriptor
 import com.intellij.openapi.observable.properties.AtomicBooleanProperty
 import com.intellij.openapi.observable.properties.ObservableProperty
 import com.intellij.openapi.observable.util.bindEnabled
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogPanel
+import com.intellij.openapi.ui.TextBrowseFolderListener
+import com.intellij.openapi.ui.TextFieldWithBrowseButton
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.ui.dsl.builder.AlignX
+import com.intellij.ui.dsl.builder.AlignY
 import com.intellij.ui.dsl.builder.BottomGap
 import com.intellij.ui.dsl.builder.Cell
 import com.intellij.ui.dsl.builder.MutableProperty
@@ -15,8 +19,6 @@ import com.intellij.ui.dsl.builder.RowLayout
 import com.intellij.ui.dsl.builder.bindSelected
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
-import com.intellij.ui.dsl.gridLayout.HorizontalAlign
-import com.intellij.ui.dsl.gridLayout.VerticalAlign
 import com.intellij.ui.layout.selected
 import io.gitlab.arturbosch.detekt.idea.DetektBundle
 import io.gitlab.arturbosch.detekt.idea.config.DetektPluginSettings
@@ -116,7 +118,7 @@ internal class DetektConfigUi(
     private fun Panel.configurationFilesRow(isEnabled: ObservableProperty<Boolean>) {
         row {
             val label = label(DetektBundle.message("detekt.configuration.configurationFiles.title"))
-                .verticalAlign(VerticalAlign.TOP)
+                .align(AlignY.TOP)
                 .component
 
             val listModel = FilesListPanel.ListModel()
@@ -131,7 +133,7 @@ internal class DetektConfigUi(
                 .bindEnabled(isEnabled)
 
             cell(filesListPanel)
-                .horizontalAlign(HorizontalAlign.FILL)
+                .align(AlignX.FILL)
                 .resizableColumn()
                 .bindItems(settings::configurationFilePaths, listModel)
 
@@ -145,10 +147,11 @@ internal class DetektConfigUi(
 
     private fun Panel.baselineFileRow() {
         row(DetektBundle.message("detekt.configuration.baselineFile.title")) {
-            textFieldWithBrowseButton(
-                DetektBundle.message("detekt.configuration.baselineFile.dialog.title"),
-                project,
-                FileChooserDescriptorUtil.createSingleXmlChooserDescriptor()
+            cell(
+                browseField(
+                    FileChooserDescriptorUtil.createSingleXmlChooserDescriptor()
+                        .withTitle(DetektBundle.message("detekt.configuration.baselineFile.dialog.title"))
+                )
             )
                 .bindText(
                     getter = { LocalFileSystem.getInstance().extractPresentableUrl(settings.baselinePath) },
@@ -160,7 +163,7 @@ internal class DetektConfigUi(
                         }
                     }
                 )
-                .horizontalAlign(HorizontalAlign.FILL)
+                .align(AlignX.FILL)
                 .resizableColumn()
                 .validationOnInput { validateAsFilePath(it.text, isWarning = true) }
                 .validationOnApply { validateAsFilePath(it.text) }
@@ -174,7 +177,7 @@ internal class DetektConfigUi(
     private fun Panel.pluginJarsRow(isEnabled: ObservableProperty<Boolean>) {
         row {
             val label = label(DetektBundle.message("detekt.configuration.pluginJarFiles.title"))
-                .verticalAlign(VerticalAlign.TOP)
+                .align(AlignY.TOP)
                 .component
 
             val listModel = FilesListPanel.ListModel(settings.pluginJarPaths.toVirtualFilesList())
@@ -189,7 +192,7 @@ internal class DetektConfigUi(
                 .bindEnabled(isEnabled)
 
             cell(filesListPanel)
-                .horizontalAlign(HorizontalAlign.FILL)
+                .align(AlignX.FILL)
                 .resizableColumn()
                 .bindItems(settings::pluginJarPaths, listModel)
 
@@ -203,10 +206,11 @@ internal class DetektConfigUi(
 
     private fun Panel.pluginJarsDirectoryRow() {
         row(DetektBundle.message("detekt.configuration.pluginJarsDirectory.title")) {
-            textFieldWithBrowseButton(
-                DetektBundle.message("detekt.configuration.pluginJarsDirectory.dialog.title"),
-                project,
-                FileChooserDescriptorUtil.createSingleFolderChooserDescriptor()
+            cell(
+                browseField(
+                    FileChooserDescriptorUtil.createSingleFolderChooserDescriptor()
+                        .withTitle(DetektBundle.message("detekt.configuration.pluginJarsDirectory.dialog.title"))
+                )
             )
                 .bindText(
                     getter = { LocalFileSystem.getInstance().extractPresentableUrl(settings.pluginJarsDirectory) },
@@ -222,6 +226,11 @@ internal class DetektConfigUi(
             comment(DetektBundle.message("detekt.configuration.pluginJarsDirectory.comment"))
         }
     }
+
+    private fun browseField(descriptor: FileChooserDescriptor): TextFieldWithBrowseButton =
+        TextFieldWithBrowseButton().apply {
+            addBrowseFolderListener(TextBrowseFolderListener(descriptor, project))
+        }
 
     private fun Cell<JPanel>.bindItems(
         fileListProperty: KMutableProperty0<List<String>>,

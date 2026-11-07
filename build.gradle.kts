@@ -2,6 +2,7 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask
 import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
+import org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -20,31 +21,17 @@ repositories {
     }
 }
 
-fun Configuration.runtimeJarAttributes() {
-    attributes {
-        attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
-        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
-        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.JAR))
-        attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling.EXTERNAL))
-    }
-}
-
-val detektRuntimeScope = configurations.dependencyScope("detektRuntimeScope")
-val detektRuntime = configurations.resolvable("detektRuntime") {
-    extendsFrom(detektRuntimeScope.get())
-    runtimeJarAttributes()
-}
-
-val testRulesScope = configurations.dependencyScope("testRulesScope")
-val testRules = configurations.resolvable("testRules") {
-    extendsFrom(testRulesScope.get())
-    runtimeJarAttributes()
-}
+val engine = sourceSets.create("engine")
+val testRules = sourceSets.create("testRules")
 
 dependencies {
-    implementation(project(":engine-api"))
-    add(detektRuntimeScope.name, project(":engine"))
-    add(testRulesScope.name, project(":engine-test-rules"))
+    engine.compileOnlyConfigurationName(sourceSets.main.get().output)
+    engine.implementationConfigurationName(libs.detekt.api)
+    engine.implementationConfigurationName(libs.detekt.tooling)
+    engine.runtimeOnlyConfigurationName(libs.detekt.cli)
+    engine.runtimeOnlyConfigurationName(libs.detekt.ktlintWrapper)
+
+    testRules.compileOnlyConfigurationName(libs.detekt.api)
 
     testImplementation(libs.assertj.core)
     testImplementation(libs.junit.jupiter)
@@ -67,10 +54,24 @@ dependencies {
 
 kotlin {
     jvmToolchain(21)
+    compilerOptions {
+        jvmDefault = JvmDefaultMode.NO_COMPATIBILITY
+    }
+}
+
+val engineJar = tasks.register<Jar>("engineJar") {
+    archiveBaseName = "daetekt-engine"
+    from(engine.output)
+}
+
+val testRulesJar = tasks.register<Jar>("testRulesJar") {
+    archiveBaseName = "daetekt-test-rules"
+    from(testRules.output)
 }
 
 val syncDetektRuntime = tasks.register<Sync>("syncDetektRuntime") {
-    from(detektRuntime)
+    from(engineJar)
+    from(configurations.named(engine.runtimeClasspathConfigurationName))
     into(layout.buildDirectory.dir("detekt-runtime"))
 }
 
@@ -82,20 +83,16 @@ tasks.withType<PrepareSandboxTask>().configureEach {
 
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
-    dependsOn(syncDetektRuntime)
-    inputs.files(testRules)
+    inputs.files(syncDetektRuntime, testRulesJar)
     val runtimeDirectory = syncDetektRuntime.map { it.destinationDir.absolutePath }
-    val rulesJar = testRules.map { configuration ->
-        configuration.files.single { it.name.startsWith("engine-test-rules") }.absolutePath
-    }
+    val rulesJar = testRulesJar.flatMap { it.archiveFile }.map { it.asFile.absolutePath }
     jvmArgumentProviders += CommandLineArgumentProvider {
         listOf(
-            "-Dintellijekt.detekt.runtime=${runtimeDirectory.get()}",
-            "-Dintellijekt.test.rulesJar=${rulesJar.get()}",
+            "-Ddaetekt.detekt.runtime=${runtimeDirectory.get()}",
+            "-Ddaetekt.test.rulesJar=${rulesJar.get()}",
         )
     }
     testLogging {
-        showStandardStreams = true
         showExceptions = true
         showCauses = true
         exceptionFormat = TestExceptionFormat.FULL
@@ -115,7 +112,7 @@ intellijPlatform {
     buildSearchableOptions = false
 
     pluginConfiguration {
-        name.set("intellijekt")
+        name.set("daetekt")
 
         ideaVersion {
             untilBuild = provider { null }
@@ -149,7 +146,7 @@ githubRelease {
         }
     )
     val distribution = project.layout.buildDirectory
-        .file("distributions/Detekt IntelliJ Plugin-${project.version}.zip")
+        .file("distributions/daetekt-${project.version}.zip")
     releaseAssets.setFrom(distribution)
 }
 

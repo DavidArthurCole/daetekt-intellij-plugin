@@ -6,13 +6,13 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.ProjectManagerListener
+import com.intellij.openapi.startup.ProjectActivity
 import io.gitlab.arturbosch.detekt.idea.config.DetektPluginSettings
 import io.gitlab.arturbosch.detekt.idea.config.DetektPluginSettings.EnableForProjectPromptResult
 
-class DetektProjectManagerListener : ProjectManagerListener {
+class DetektProjectManagerListener : ProjectActivity {
 
-    override fun projectOpened(project: Project) {
+    override suspend fun execute(project: Project) {
         val settings = project.service<DetektPluginSettings>()
 
         // Only show the prompt if detekt isn't already enabled, and the user hasn't

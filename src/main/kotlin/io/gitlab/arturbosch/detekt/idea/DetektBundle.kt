@@ -7,7 +7,7 @@ import java.util.function.Supplier
 
 private const val BUNDLE_NAME = "messages.detektBundle"
 
-object DetektBundle : DynamicBundle(BUNDLE_NAME) {
+object DetektBundle : DynamicBundle(DetektBundle::class.java, BUNDLE_NAME) {
 
     @Nls
     fun message(

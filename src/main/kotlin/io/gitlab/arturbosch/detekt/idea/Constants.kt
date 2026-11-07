@@ -3,7 +3,7 @@ package io.gitlab.arturbosch.detekt.idea
 import com.intellij.openapi.util.Key
 
 const val DETEKT = "detekt"
-const val NOTIFICATION_GROUP_ID = "intellijekt"
+const val NOTIFICATION_GROUP_ID = "daetekt"
 
 const val SPECIAL_FILENAME_FOR_DEBUGGING = "/fragment.kt"
 const val SPECIAL_FILENAME_AI_SNIPPED = "/AIAssistantSnippet."

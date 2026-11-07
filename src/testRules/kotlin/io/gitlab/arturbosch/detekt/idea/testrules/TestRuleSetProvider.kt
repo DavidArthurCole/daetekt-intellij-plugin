@@ -12,7 +12,7 @@ import org.jetbrains.kotlin.psi.KtFile
 
 class TestRuleSetProvider : RuleSetProvider {
 
-    override val ruleSetId: RuleSetId = RuleSetId("intellijekt-test")
+    override val ruleSetId: RuleSetId = RuleSetId("daetekt-test")
 
     override fun instance(): RuleSet = RuleSet(
         ruleSetId,

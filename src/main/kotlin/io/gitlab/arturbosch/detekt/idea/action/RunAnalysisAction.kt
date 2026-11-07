@@ -4,11 +4,13 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.PlatformDataKeys
-import com.intellij.openapi.application.runReadAction
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
+import com.intellij.openapi.util.Computable
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import io.gitlab.arturbosch.detekt.idea.ConfiguredService
 import io.gitlab.arturbosch.detekt.idea.DetektBundle
@@ -35,11 +37,11 @@ class RunAnalysisAction : AnAction(PluginUtils.pluginIcon()) {
         }
 
         val project = e.project ?: return
-        val psiFiles = runReadAction {
+        val psiFiles = ApplicationManager.getApplication().runReadAction(Computable<List<PsiFile>> {
             findAllFilesRecursively(selectedFiles)
                 .mapNotNull { PsiManager.getInstance(project).findFile(it) }
                 .filter { it.language.id == KOTLIN_LANGUAGE_ID }
-        }
+        })
 
         val job = object : Task.Backgroundable(project, DetektBundle.message("detekt.analysis.run"), true) {
             override fun run(indicator: ProgressIndicator) {

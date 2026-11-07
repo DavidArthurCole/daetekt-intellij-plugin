@@ -5,45 +5,21 @@ import com.intellij.openapi.vfs.VirtualFile
 
 object FileChooserDescriptorUtil {
 
-    fun createJarsChooserDescriptor() =
-        createMultipleFilesChooserDescriptor(allowJars = true) { it.extension.equals("jar", ignoreCase = true) }
+    fun createJarsChooserDescriptor(): FileChooserDescriptor =
+        FileChooserDescriptor(true, false, true, true, false, true)
+            .withFileFilter { it.hasExtension("jar") }
 
-    fun createYamlChooserDescriptor() =
-        createMultipleFilesChooserDescriptor {
-            it.extension.equals("yml", ignoreCase = true) || it.extension.equals("yaml", ignoreCase = true)
-        }
+    fun createYamlChooserDescriptor(): FileChooserDescriptor =
+        FileChooserDescriptor(true, false, false, false, false, true)
+            .withFileFilter { it.hasExtension("yml", "yaml") }
 
-    private fun createMultipleFilesChooserDescriptor(
-        allowFiles: Boolean = true,
-        allowDirectories: Boolean = false,
-        allowJars: Boolean = false,
-        showIncompatibleFiles: Boolean = false,
-        fileFilter: (VirtualFile) -> Boolean = { true }
-    ) =
-        object : FileChooserDescriptor(allowFiles, allowDirectories, allowJars, allowJars, false, true) {
-            override fun isFileSelectable(file: VirtualFile?) =
-                file?.let { fileFilter(file) } ?: false
+    fun createSingleFolderChooserDescriptor(): FileChooserDescriptor =
+        FileChooserDescriptor(false, true, false, false, false, false)
 
-            override fun isFileVisible(file: VirtualFile?, showHiddenFiles: Boolean) =
-                if (file == null || file.isDirectory || showIncompatibleFiles) true else fileFilter(file)
-        }
+    fun createSingleXmlChooserDescriptor(): FileChooserDescriptor =
+        FileChooserDescriptor(true, false, false, false, false, false)
+            .withFileFilter { it.hasExtension("xml") }
 
-    fun createSingleFolderChooserDescriptor() = FileChooserDescriptor(false, true, false, false, false, false)
-
-    fun createSingleXmlChooserDescriptor() =
-        createSingleFileChooserDescriptor { it.extension.equals("xml", ignoreCase = true) }
-
-    private fun createSingleFileChooserDescriptor(
-        allowFiles: Boolean = true,
-        allowJars: Boolean = false,
-        showIncompatibleFiles: Boolean = false,
-        fileFilter: (VirtualFile) -> Boolean = { true }
-    ) =
-        object : FileChooserDescriptor(allowFiles, false, allowJars, allowJars, false, false) {
-            override fun isFileSelectable(file: VirtualFile?) =
-                file?.let { fileFilter(file) } ?: false
-
-            override fun isFileVisible(file: VirtualFile?, showHiddenFiles: Boolean) =
-                if (file == null || file.isDirectory || showIncompatibleFiles) true else fileFilter(file)
-        }
+    private fun VirtualFile.hasExtension(vararg extensions: String): Boolean =
+        extensions.any { extension.equals(it, ignoreCase = true) }
 }

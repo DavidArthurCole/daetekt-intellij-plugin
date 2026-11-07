@@ -12,7 +12,7 @@ import kotlin.io.path.Path
 import kotlin.io.path.extension
 import kotlin.io.path.isDirectory
 
-const val DETEKT_RUNTIME_PROPERTY = "intellijekt.detekt.runtime"
+const val DETEKT_RUNTIME_PROPERTY = "daetekt.detekt.runtime"
 
 private const val ENGINE_API_PACKAGE = "io.gitlab.arturbosch.detekt.idea.engine.api."
 

@@ -1,5 +1,6 @@
 package io.gitlab.arturbosch.detekt.idea.util
 
+import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.notification.Notification
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.ActionUpdateThread
@@ -8,8 +9,10 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.options.newEditor.SettingsDialog
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
+import com.intellij.psi.PsiManager
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.layout.ValidationInfoBuilder
@@ -25,6 +28,14 @@ import kotlin.io.path.absolute
 fun Project.settings(): DetektPluginSettings = service<DetektPluginSettings>()
 
 fun Project.isDetektEnabled(): Boolean = settings().enableDetekt
+
+fun restartAnalysis(project: Project) {
+    val analyzer = DaemonCodeAnalyzer.getInstance(project)
+    val psiManager = PsiManager.getInstance(project)
+    FileEditorManager.getInstance(project).openFiles
+        .mapNotNull { psiManager.findFile(it) }
+        .forEach { analyzer.restart(it) }
+}
 
 fun Project.isFormattingEnabled(): Boolean = settings().run { enableDetekt && enableFormatting }
 

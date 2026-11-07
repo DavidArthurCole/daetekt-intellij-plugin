@@ -1,6 +1,4 @@
-rootProject.name = "detekt-intellij-plugin"
-
-include(":engine-api", ":engine", ":engine-test-rules")
+rootProject.name = "daetekt"
 
 // build scan plugin can only be applied in settings file
 plugins {

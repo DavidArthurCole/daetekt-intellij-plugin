@@ -10,7 +10,7 @@ import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
 
 @Service(Service.Level.PROJECT)
-@State(name = "IntellijektSettings", storages = [Storage("intellijekt.xml")])
+@State(name = "DaetektSettings", storages = [Storage("daetekt.xml")])
 class DetektPluginSettings(
     private val project: Project,
 ) : SimplePersistentStateComponent<DetektPluginSettings.State>(State()) {

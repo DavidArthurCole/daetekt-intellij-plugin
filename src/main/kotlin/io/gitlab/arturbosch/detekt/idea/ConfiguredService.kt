@@ -1,6 +1,7 @@
 package io.gitlab.arturbosch.detekt.idea
 
-import com.intellij.openapi.application.runReadAction
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.util.Computable
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.progress.ProcessCanceledException
@@ -133,7 +134,7 @@ class ConfiguredService(
     fun execute(file: PsiFile, autoCorrect: Boolean): AnalysisOutcome {
         val pathToAnalyze = file.virtualFile?.canonicalPath ?: return AnalysisOutcome.EMPTY
         if (!Files.isRegularFile(Path(pathToAnalyze))) return AnalysisOutcome.EMPTY
-        val content = runCatching { runReadAction { file.text } }
+        val content = runCatching { ApplicationManager.getApplication().runReadAction(Computable { file.text }) }
             .onFailure {
                 logErrorIfAllowed(
                     it,
