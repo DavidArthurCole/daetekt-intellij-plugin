@@ -1,6 +1,6 @@
 <idea-plugin>
-    <id>detekt</id>
-    <name>detekt</name>
+    <id>intellijekt</id>
+    <name>intellijekt</name>
     <category>Tools Integration</category>
     <vendor email="arturbosch@gmx.de" url="https://github.com/detekt">
         detekt

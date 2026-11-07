@@ -46,6 +46,12 @@ class OptionalModuleBoundaryTest {
     }
 
     @Test
+    fun noClassNeedsTheKotlinPluginAtRuntime() {
+        assertThat(KOTLIN_LANGUAGE_ID).isEqualTo(org.jetbrains.kotlin.idea.KotlinLanguage.INSTANCE.id)
+        assertThat(classesReferencing("org/jetbrains/kotlin/idea/")).isEmpty()
+    }
+
+    @Test
     fun noClassReferencesVcsModule() {
         assertThat(compiledClasses).isNotEmpty
         assertThat(classesReferencing("com/intellij/openapi/vcs/")).isEmpty()

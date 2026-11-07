@@ -1,0 +1,6 @@
+intellijekt-test:
+  active: true
+  FileMarker:
+    active: false
+  TypeResolvedFileMarker:
+    active: false

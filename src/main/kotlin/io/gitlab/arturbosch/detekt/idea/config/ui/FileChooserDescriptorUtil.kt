@@ -28,6 +28,8 @@ object FileChooserDescriptorUtil {
                 if (file == null || file.isDirectory || showIncompatibleFiles) true else fileFilter(file)
         }
 
+    fun createSingleFolderChooserDescriptor() = FileChooserDescriptor(false, true, false, false, false, false)
+
     fun createSingleXmlChooserDescriptor() =
         createSingleFileChooserDescriptor { it.extension.equals("xml", ignoreCase = true) }
 

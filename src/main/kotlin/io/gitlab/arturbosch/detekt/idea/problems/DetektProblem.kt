@@ -3,35 +3,35 @@ package io.gitlab.arturbosch.detekt.idea.problems
 import com.intellij.analysis.problemsView.FileProblem
 import com.intellij.codeHighlighting.HighlightDisplayLevel
 import com.intellij.openapi.vfs.VirtualFile
-import io.gitlab.arturbosch.detekt.api.Finding
-import io.gitlab.arturbosch.detekt.api.SeverityLevel
+import io.gitlab.arturbosch.detekt.idea.engine.api.EngineFinding
+import io.gitlab.arturbosch.detekt.idea.engine.api.EngineSeverity
 import javax.swing.Icon
 
 class DetektProblem(
     override val provider: DetektProblemsProvider,
     override val file: VirtualFile,
-    private val finding: Finding,
+    private val finding: EngineFinding,
 ) : FileProblem {
 
     override val text: String
-        get() = finding.messageOrDescription()
+        get() = finding.message
 
     override val description: String
-        get() = finding.issue.description
+        get() = finding.description
 
     override val group: String
-        get() = finding.id
+        get() = finding.ruleId
 
     override val icon: Icon
         get() = when (finding.severity) {
-            SeverityLevel.ERROR -> HighlightDisplayLevel.ERROR.icon
-            SeverityLevel.WARNING -> HighlightDisplayLevel.WARNING.icon
-            SeverityLevel.INFO -> HighlightDisplayLevel.WEAK_WARNING.icon
+            EngineSeverity.Error -> HighlightDisplayLevel.ERROR.icon
+            EngineSeverity.Warning -> HighlightDisplayLevel.WARNING.icon
+            EngineSeverity.Info -> HighlightDisplayLevel.WEAK_WARNING.icon
         }
 
     override val line: Int
-        get() = finding.entity.location.source.line - 1
+        get() = finding.line - 1
 
     override val column: Int
-        get() = finding.entity.location.source.column - 1
+        get() = finding.column - 1
 }

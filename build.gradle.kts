@@ -1,5 +1,7 @@
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask
+import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -18,21 +20,32 @@ repositories {
     }
 }
 
-dependencies {
-    constraints {
-        runtimeOnly(libs.slf4j.api) {
-            because("transitive ktlint logging dependency (2.0.3) does not use the module classloader in ServiceLoader")
-        }
+fun Configuration.runtimeJarAttributes() {
+    attributes {
+        attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.JAR))
+        attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling.EXTERNAL))
     }
+}
 
-    implementation(libs.detekt.api)
-    implementation(libs.detekt.tooling)
+val detektRuntimeScope = configurations.dependencyScope("detektRuntimeScope")
+val detektRuntime = configurations.resolvable("detektRuntime") {
+    extendsFrom(detektRuntimeScope.get())
+    runtimeJarAttributes()
+}
 
-    runtimeOnly(libs.detekt.core)
-    runtimeOnly(libs.detekt.rules)
-    runtimeOnly(libs.detekt.formatting)
+val testRulesScope = configurations.dependencyScope("testRulesScope")
+val testRules = configurations.resolvable("testRules") {
+    extendsFrom(testRulesScope.get())
+    runtimeJarAttributes()
+}
 
-    testImplementation(libs.detekt.testUtils)
+dependencies {
+    implementation(project(":engine-api"))
+    add(detektRuntimeScope.name, project(":engine"))
+    add(testRulesScope.name, project(":engine-test-rules"))
+
     testImplementation(libs.assertj.core)
     testImplementation(libs.junit.jupiter)
 
@@ -56,8 +69,31 @@ kotlin {
     jvmToolchain(21)
 }
 
+val syncDetektRuntime = tasks.register<Sync>("syncDetektRuntime") {
+    from(detektRuntime)
+    into(layout.buildDirectory.dir("detekt-runtime"))
+}
+
+tasks.withType<PrepareSandboxTask>().configureEach {
+    from(syncDetektRuntime) {
+        into(pluginName.map { "$it/detekt" })
+    }
+}
+
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+    dependsOn(syncDetektRuntime)
+    inputs.files(testRules)
+    val runtimeDirectory = syncDetektRuntime.map { it.destinationDir.absolutePath }
+    val rulesJar = testRules.map { configuration ->
+        configuration.files.single { it.name.startsWith("engine-test-rules") }.absolutePath
+    }
+    jvmArgumentProviders += CommandLineArgumentProvider {
+        listOf(
+            "-Dintellijekt.detekt.runtime=${runtimeDirectory.get()}",
+            "-Dintellijekt.test.rulesJar=${rulesJar.get()}",
+        )
+    }
     testLogging {
         showStandardStreams = true
         showExceptions = true
@@ -76,8 +112,10 @@ tasks.publishPlugin {
 }
 
 intellijPlatform {
+    buildSearchableOptions = false
+
     pluginConfiguration {
-        name.set("Detekt IntelliJ Plugin")
+        name.set("intellijekt")
 
         ideaVersion {
             untilBuild = provider { null }
@@ -86,6 +124,11 @@ intellijPlatform {
 
     pluginVerification {
         ides { recommended() }
+        failureLevel = listOf(
+            VerifyPluginTask.FailureLevel.COMPATIBILITY_PROBLEMS,
+            VerifyPluginTask.FailureLevel.INVALID_PLUGIN,
+            VerifyPluginTask.FailureLevel.MISSING_DEPENDENCIES,
+        )
     }
 }
 

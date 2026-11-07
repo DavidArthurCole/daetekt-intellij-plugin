@@ -1,5 +1,7 @@
 rootProject.name = "detekt-intellij-plugin"
 
+include(":engine-api", ":engine", ":engine-test-rules")
+
 // build scan plugin can only be applied in settings file
 plugins {
     id("com.gradle.develocity") version "4.3"

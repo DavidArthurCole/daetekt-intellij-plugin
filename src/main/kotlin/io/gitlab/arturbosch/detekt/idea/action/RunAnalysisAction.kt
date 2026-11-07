@@ -13,10 +13,9 @@ import com.intellij.psi.PsiManager
 import io.gitlab.arturbosch.detekt.idea.ConfiguredService
 import io.gitlab.arturbosch.detekt.idea.DetektBundle
 import io.gitlab.arturbosch.detekt.idea.KOTLIN_FILE_EXTENSIONS
+import io.gitlab.arturbosch.detekt.idea.KOTLIN_LANGUAGE_ID
 import io.gitlab.arturbosch.detekt.idea.problems.FindingsManager
 import io.gitlab.arturbosch.detekt.idea.util.PluginUtils
-import org.jetbrains.kotlin.backend.common.pop
-import org.jetbrains.kotlin.idea.KotlinLanguage
 
 class RunAnalysisAction : AnAction(PluginUtils.pluginIcon()) {
 
@@ -39,8 +38,7 @@ class RunAnalysisAction : AnAction(PluginUtils.pluginIcon()) {
         val psiFiles = runReadAction {
             findAllFilesRecursively(selectedFiles)
                 .mapNotNull { PsiManager.getInstance(project).findFile(it) }
-                .filter { it.language.id == KotlinLanguage.INSTANCE.id }
-                .toList()
+                .filter { it.language.id == KOTLIN_LANGUAGE_ID }
         }
 
         val job = object : Task.Backgroundable(project, DetektBundle.message("detekt.analysis.run"), true) {
@@ -50,7 +48,7 @@ class RunAnalysisAction : AnAction(PluginUtils.pluginIcon()) {
                 val findingsManager = FindingsManager.getInstance(project)
                 indicator.checkCanceled()
                 for (psi in psiFiles) {
-                    val findings = service.execute(psi, false)
+                    val findings = service.execute(psi, false).findings
                     indicator.checkCanceled()
                     findingsManager.put(psi.virtualFile, findings)
                 }
@@ -61,16 +59,18 @@ class RunAnalysisAction : AnAction(PluginUtils.pluginIcon()) {
         ProgressManager.getInstance().run(job)
     }
 
-    private fun findAllFilesRecursively(selectedFiles: Array<VirtualFile>): Sequence<VirtualFile> = sequence {
+    private fun findAllFilesRecursively(selectedFiles: Array<VirtualFile>): List<VirtualFile> {
+        val files = mutableListOf<VirtualFile>()
         val dirStack = ArrayDeque<VirtualFile>()
         dirStack.addAll(selectedFiles)
         while (dirStack.isNotEmpty()) {
-            val currentVirtualFile = dirStack.pop()
+            val currentVirtualFile = dirStack.removeLast()
             if (currentVirtualFile.isDirectory) {
                 dirStack.addAll(currentVirtualFile.children)
             } else {
-                yield(currentVirtualFile)
+                files += currentVirtualFile
             }
         }
+        return files
     }
 }

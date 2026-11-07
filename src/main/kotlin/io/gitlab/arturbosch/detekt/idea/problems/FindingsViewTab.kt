@@ -7,7 +7,7 @@ import com.intellij.openapi.application.invokeLater
 import com.intellij.openapi.project.Project
 import io.gitlab.arturbosch.detekt.idea.DetektBundle
 
-private const val FINDINGS_TAB_ID = "io.github.arturbosch.detekt.idea.findings.tab"
+private const val FINDINGS_TAB_ID = "intellijekt.findings.tab"
 
 class FindingsViewTab(
     project: Project,

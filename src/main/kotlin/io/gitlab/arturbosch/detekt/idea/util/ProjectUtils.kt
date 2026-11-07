@@ -104,6 +104,13 @@ fun showNotification(title: String, content: String, project: Project) {
     notification.notify(project)
 }
 
+internal fun ValidationInfoBuilder.validateAsDirectoryPath(text: String) =
+    if (text.isNotBlank() && !File(text.trim()).isDirectory) {
+        warning(DetektBundle.message("detekt.configuration.validationError.directoryPath"))
+    } else {
+        null
+    }
+
 internal fun ValidationInfoBuilder.validateAsFilePath(text: String, isWarning: Boolean = false) =
     if (text.isNotEmpty() && !File(text).isFile) {
         if (isWarning) {

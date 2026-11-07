@@ -12,7 +12,7 @@ import io.gitlab.arturbosch.detekt.idea.util.clearShownProblems
 class DetektConfig(private val project: Project) : BoundSearchableConfigurable(
     displayName = DetektBundle.message("detekt.configuration.title"),
     helpTopic = DetektBundle.message("detekt.configuration.title"),
-    _id = "io.github.detekt.config",
+    _id = "intellijekt.config",
 ) {
 
     private val settings = project.service<DetektPluginSettings>()

@@ -10,7 +10,7 @@ import io.gitlab.arturbosch.detekt.idea.action.AutoCorrectAction
 
 class AutoCorrectIntention : IntentionAction, LowPriorityAction {
 
-    override fun startInWriteAction(): Boolean = true
+    override fun startInWriteAction(): Boolean = false
 
     override fun getText(): String = "Auto-correct with $DETEKT"
 

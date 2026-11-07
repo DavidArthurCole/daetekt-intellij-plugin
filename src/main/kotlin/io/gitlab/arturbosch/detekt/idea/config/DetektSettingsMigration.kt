@@ -8,7 +8,7 @@ import com.intellij.openapi.components.Storage
 import com.intellij.openapi.components.StoragePathMacros
 
 @Service(Service.Level.PROJECT)
-@State(name = "DetektSettingsMigration", storages = [(Storage(StoragePathMacros.WORKSPACE_FILE))])
+@State(name = "IntellijektSettingsMigration", storages = [(Storage(StoragePathMacros.WORKSPACE_FILE))])
 internal class DetektSettingsMigration : SimplePersistentStateComponent<DetektSettingsMigration.State>(State()) {
 
     // ---------

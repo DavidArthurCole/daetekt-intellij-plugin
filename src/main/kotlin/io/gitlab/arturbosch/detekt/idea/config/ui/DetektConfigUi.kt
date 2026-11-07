@@ -6,6 +6,7 @@ import com.intellij.openapi.observable.util.bindEnabled
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogPanel
 import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.BottomGap
 import com.intellij.ui.dsl.builder.Cell
 import com.intellij.ui.dsl.builder.MutableProperty
@@ -22,6 +23,7 @@ import io.gitlab.arturbosch.detekt.idea.config.DetektPluginSettings
 import io.gitlab.arturbosch.detekt.idea.util.hasUnresolvedPaths
 import io.gitlab.arturbosch.detekt.idea.util.toPathsList
 import io.gitlab.arturbosch.detekt.idea.util.toVirtualFilesList
+import io.gitlab.arturbosch.detekt.idea.util.validateAsDirectoryPath
 import io.gitlab.arturbosch.detekt.idea.util.validateAsFilePath
 import java.io.File
 import javax.swing.JCheckBox
@@ -107,6 +109,8 @@ internal class DetektConfigUi(
             baselineFileRow()
 
             pluginJarsRow(isEnabled)
+
+            pluginJarsDirectoryRow()
         }
 
     private fun Panel.configurationFilesRow(isEnabled: ObservableProperty<Boolean>) {
@@ -194,6 +198,28 @@ internal class DetektConfigUi(
 
         row("") {
             comment(DetektBundle.message("detekt.configuration.pluginJarFiles.comment"))
+        }
+    }
+
+    private fun Panel.pluginJarsDirectoryRow() {
+        row(DetektBundle.message("detekt.configuration.pluginJarsDirectory.title")) {
+            textFieldWithBrowseButton(
+                DetektBundle.message("detekt.configuration.pluginJarsDirectory.dialog.title"),
+                project,
+                FileChooserDescriptorUtil.createSingleFolderChooserDescriptor()
+            )
+                .bindText(
+                    getter = { LocalFileSystem.getInstance().extractPresentableUrl(settings.pluginJarsDirectory) },
+                    setter = { settings.pluginJarsDirectory = it.trim().replace('\\', '/') }
+                )
+                .align(AlignX.FILL)
+                .resizableColumn()
+                .validationOnInput { validateAsDirectoryPath(it.text) }
+                .validationOnApply { validateAsDirectoryPath(it.text) }
+        }
+
+        row("") {
+            comment(DetektBundle.message("detekt.configuration.pluginJarsDirectory.comment"))
         }
     }
 

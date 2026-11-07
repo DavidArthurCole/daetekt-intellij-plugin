@@ -10,7 +10,7 @@ import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
 
 @Service(Service.Level.PROJECT)
-@State(name = "DetektPluginSettings", storages = [Storage("detekt.xml")])
+@State(name = "IntellijektSettings", storages = [Storage("intellijekt.xml")])
 class DetektPluginSettings(
     private val project: Project,
 ) : SimplePersistentStateComponent<DetektPluginSettings.State>(State()) {
@@ -72,6 +72,12 @@ class DetektPluginSettings(
             state.pluginJars = value.toMutableList()
         }
 
+    var pluginJarsDirectory: String
+        get() = state.pluginJarsDirectory.orEmpty()
+        set(value) {
+            state.pluginJarsDirectory = value
+        }
+
     var debug: Boolean
         get() = state.detektDebugMode
         set(value) {
@@ -117,6 +123,7 @@ class DetektPluginSettings(
 
         var baselinePath by string()
         var pluginJars by list<String>()
+        var pluginJarsDirectory by string()
 
         //////////////////////////////////
         //// Deprecated v2 properties ////

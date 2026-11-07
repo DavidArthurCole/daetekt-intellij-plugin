@@ -1,22 +1,18 @@
 package io.gitlab.arturbosch.detekt.idea
 
 import com.intellij.openapi.application.runReadAction
-import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.psi.PsiFile
-import io.github.detekt.tooling.api.DetektProvider
-import io.github.detekt.tooling.api.UnexpectedError
-import io.github.detekt.tooling.api.spec.ProcessingSpec
-import io.github.detekt.tooling.api.spec.RulesSpec
-import io.gitlab.arturbosch.detekt.api.Finding
-import io.gitlab.arturbosch.detekt.api.UnstableApi
 import io.gitlab.arturbosch.detekt.idea.config.DetektPluginSettings
+import io.gitlab.arturbosch.detekt.idea.engine.EngineLoader
+import io.gitlab.arturbosch.detekt.idea.engine.api.AnalysisOutcome
+import io.gitlab.arturbosch.detekt.idea.engine.api.AnalysisRequest
+import io.gitlab.arturbosch.detekt.idea.engine.api.DetektEngine
 import io.gitlab.arturbosch.detekt.idea.util.DirectExecutor
-import io.gitlab.arturbosch.detekt.idea.util.PluginUtils
 import io.gitlab.arturbosch.detekt.idea.util.SimpleAppendable
 import io.gitlab.arturbosch.detekt.idea.util.absoluteBaselinePath
 import java.io.File
@@ -26,11 +22,32 @@ import java.nio.file.Paths
 import kotlin.io.path.Path
 import kotlin.io.path.exists
 
-internal fun analysisBasePath(projectDir: Path?, input: Path): Path? =
-    projectDir?.let { if (it.root == input.root) it else input.parent }
+internal fun jarsIn(directory: Path?): List<Path> {
+    if (directory == null || !Files.isDirectory(directory)) {
+        return emptyList()
+    }
+    return Files.list(directory).use { paths ->
+        paths.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".jar", ignoreCase = true) }
+            .sorted()
+            .toList()
+    }
+}
 
-class ConfiguredService(private val project: Project) {
+internal fun analysisRelativePath(projectDir: Path?, input: Path): Path {
+    if (projectDir != null && projectDir.root == input.root && input.startsWith(projectDir)) {
+        return projectDir.relativize(input)
+    }
+    return input.fileName
+}
 
+class ConfiguredService(
+    private val project: Project,
+    engineProvider: () -> DetektEngine = { EngineLoader.engine },
+) {
+
+    constructor(project: Project, engine: DetektEngine) : this(project, { engine })
+
+    private val engine by lazy(engineProvider)
     private val logger = logger<ConfiguredService>()
     private val settings = project.service<DetektPluginSettings>()
 
@@ -44,8 +61,13 @@ class ConfiguredService(private val project: Project) {
             paths.filter { Files.isDirectory(it) }.forEach { messages += "$messagePrefix <b>$it</b> is a directory." }
         }
 
-        checkPaths(pluginPaths(), "Plugin jar")
+        checkPaths(explicitPluginPaths(), "Plugin jar")
         checkPaths(configPaths(), "Configuration file")
+
+        val directory = pluginJarsDirectory()
+        if (directory != null && !Files.isDirectory(directory)) {
+            messages += "Plugin jars directory <b>$directory</b> does not exist."
+        }
 
         val baseline = baseline()
         if (baseline != null && !baseline.exists()) {
@@ -55,43 +77,24 @@ class ConfiguredService(private val project: Project) {
         return messages
     }
 
-    private fun settings(filename: String, autoCorrect: Boolean) = ProcessingSpec {
-        project {
-            val inputPath = Paths.get(filename)
-            basePath = analysisBasePath(project.guessProjectDir()?.canonicalPath?.let { Paths.get(it) }, inputPath)
-            inputPaths = listOf(inputPath)
-        }
-        rules {
-            this.autoCorrect = autoCorrect
-            activateAllRules = settings.enableAllRules
-            maxIssuePolicy = RulesSpec.MaxIssuePolicy.AllowAny
-        }
-        config {
-            // Do not throw an error during annotation mode as it is a common scenario
-            // that the IntelliJ plugin is behind detekt core version-wise (new unknown config properties).
-            shouldValidateBeforeAnalysis = false
-            useDefaultConfig = settings.buildUponDefaultConfig
-            configPaths = configPaths()
-        }
-        baseline {
-            path = baseline()
-        }
-        extensions {
-            fromPaths { pluginPaths() }
-            if (!settings.enableFormatting) {
-                disableExtension(FORMATTING_RULE_SET_ID)
-            }
-        }
-        execution {
-            executorService = DirectExecutor()
-        }
-        if (settings.redirectChannels) {
-            logging {
-                debug = settings.debug
-                outputChannel = SimpleAppendable { logger.info(it) }
-                errorChannel = SimpleAppendable { logger.warn(it) } // print to warn as error will trigger report dialog
-            }
-        }
+    private fun request(content: String, filename: String, autoCorrect: Boolean): AnalysisRequest {
+        val projectDir = project.guessProjectDir()?.canonicalPath?.let { Paths.get(it) }
+        val redirect = settings.redirectChannels
+        return AnalysisRequest(
+            content = content,
+            relativePath = analysisRelativePath(projectDir, Paths.get(filename)),
+            configPaths = configPaths(),
+            baseline = baseline(),
+            pluginPaths = pluginPaths(),
+            buildUponDefaultConfig = settings.buildUponDefaultConfig,
+            activateAllRules = settings.enableAllRules,
+            enableFormatting = settings.enableFormatting,
+            autoCorrect = autoCorrect,
+            debug = redirect && settings.debug,
+            outputChannel = if (redirect) SimpleAppendable { logger.info(it) } else null,
+            errorChannel = if (redirect) SimpleAppendable { logger.warn(it) } else null,
+            executor = DirectExecutor(),
+        )
     }
 
     private fun configPaths(): List<Path> =
@@ -101,12 +104,21 @@ class ConfiguredService(private val project: Project) {
             .asAbsolutePaths()
             .toList()
 
-    private fun pluginPaths(): List<Path> =
+    private fun explicitPluginPaths(): List<Path> =
         settings.pluginJarPaths
             .asSequence()
             .filter { it.isNotBlank() }
             .asAbsolutePaths()
             .toList()
+
+    private fun pluginJarsDirectory(): Path? =
+        sequenceOf(settings.pluginJarsDirectory)
+            .filter { it.isNotBlank() }
+            .asAbsolutePaths()
+            .firstOrNull()
+
+    private fun pluginPaths(): List<Path> =
+        (explicitPluginPaths() + jarsIn(pluginJarsDirectory())).distinct()
 
     private fun Sequence<String>.asAbsolutePaths() =
         map { it.replace('/', File.separatorChar) }
@@ -114,9 +126,13 @@ class ConfiguredService(private val project: Project) {
 
     private fun baseline(): Path? = absoluteBaselinePath(project, settings)
 
-    fun execute(file: PsiFile, autoCorrect: Boolean): List<Finding> {
-        val pathToAnalyze = file.virtualFile?.canonicalPath ?: return emptyList()
-        if (!Files.isRegularFile(Path(pathToAnalyze))) return emptyList()
+    fun suppressInBaseline(baselineId: String) {
+        engine.suppressInBaseline(requireNotNull(baseline()), baselineId)
+    }
+
+    fun execute(file: PsiFile, autoCorrect: Boolean): AnalysisOutcome {
+        val pathToAnalyze = file.virtualFile?.canonicalPath ?: return AnalysisOutcome.EMPTY
+        if (!Files.isRegularFile(Path(pathToAnalyze))) return AnalysisOutcome.EMPTY
         val content = runCatching { runReadAction { file.text } }
             .onFailure {
                 logErrorIfAllowed(
@@ -127,37 +143,21 @@ class ConfiguredService(private val project: Project) {
             .getOrThrow()
         return runCatching { execute(content, pathToAnalyze, autoCorrect) }
             .onFailure { logErrorIfAllowed(it, "Unexpected error while running detekt analysis") }
-            .getOrDefault(emptyList())
+            .getOrDefault(AnalysisOutcome.EMPTY)
     }
 
     private fun logErrorIfAllowed(error: Throwable, message: String) {
         if (error is ProcessCanceledException) {
-            return // process cancellation is not allowed to be logged and will throw
+            return
         }
         logger.error(message, error)
     }
 
-    @OptIn(UnstableApi::class)
-    fun execute(fileContent: String, filename: String, autoCorrect: Boolean): List<Finding> {
+    fun execute(fileContent: String, filename: String, autoCorrect: Boolean): AnalysisOutcome {
         val normalizedFilename = filename.replace('\\', '/')
         if (SPECIAL_FILES_TO_IGNORE.any { normalizedFilename.startsWith(it) }) {
-            return emptyList()
+            return AnalysisOutcome.EMPTY
         }
-
-        val spec: ProcessingSpec = settings(filename, autoCorrect)
-        val detekt = DetektProvider.load(PluginUtils::class.java.classLoader).get(spec)
-        val result = if (autoCorrect) {
-            runWriteAction { detekt.run(fileContent, filename) }
-        } else {
-            detekt.run(fileContent, filename)
-        }
-
-        when (val error = result.error) {
-            is UnexpectedError -> throw error.cause
-            null -> Unit
-            else -> throw error
-        }
-
-        return result.container?.findings?.flatMap { it.value } ?: emptyList()
+        return engine.analyze(request(fileContent, filename, autoCorrect))
     }
 }

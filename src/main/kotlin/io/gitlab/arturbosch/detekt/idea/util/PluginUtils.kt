@@ -1,10 +1,8 @@
 package io.gitlab.arturbosch.detekt.idea.util
 
-import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.openapi.application.ApplicationInfo
-import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.util.IconLoader
-import io.gitlab.arturbosch.detekt.idea.DETEKT
+import java.util.jar.Manifest
 import javax.swing.Icon
 
 object PluginUtils {
@@ -13,11 +11,10 @@ object PluginUtils {
 
     fun platformVersion(): String = ApplicationInfo.getInstance().fullVersion
 
-    fun pluginVersion(): String {
-        val pluginId = PluginId.getId(DETEKT)
-        val plugin = requireNotNull(PluginManagerCore.getPlugin(pluginId)) {
-            "Could not find detekt plugin descriptor."
-        }
-        return plugin.version
-    }
+    fun pluginVersion(): String =
+        PluginUtils::class.java.classLoader.getResources("META-INF/MANIFEST.MF").asSequence()
+            .mapNotNull { url -> url.openStream().use { Manifest(it) }.mainAttributes }
+            .firstOrNull { it.getValue("Build-Plugin") == "IntelliJ Platform Gradle Plugin" }
+            ?.getValue("Version")
+            ?: "unknown"
 }

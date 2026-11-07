@@ -43,7 +43,10 @@ open class KotlinParsingTestCase : MockProjectTestCase() {
             // get rid of "MOCK_ROOT:/" prefix, it is not a valid windows path
             override fun getPath(): String = testFile.toString()
         }
-        return MockPsiFile(virtualFile, PsiManager.getInstance(project)).apply {
+        val content = testFile.readText()
+        return object : MockPsiFile(virtualFile, PsiManager.getInstance(project)) {
+            override fun getText(): String = content
+        }.apply {
             putUserData(TEST_KOTLIN_LANGUAGE_ID_KEY, KotlinLanguage.INSTANCE.id)
         }
     }
