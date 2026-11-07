@@ -22,7 +22,7 @@ junit4 = { group = "junit", name = "junit", version.ref = "junit4" }
 slf4j-Api = { module = "org.slf4j:slf4j-api",  version.ref = "slfApi"}
 
 [plugins]
-kotlin-jvm = "org.jetbrains.kotlin.jvm:2.3.0"
+kotlin-jvm = "org.jetbrains.kotlin.jvm:2.4.21"
 versions = "com.github.ben-manes.versions:0.53.0"
-intellijPlatform = "org.jetbrains.intellij.platform:2.10.5"
+intellijPlatform = "org.jetbrains.intellij.platform:2.20.0"
 github-release = "com.github.breadmoirai.github-release:2.5.2"

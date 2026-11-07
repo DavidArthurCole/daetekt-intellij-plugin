@@ -40,7 +40,7 @@ dependencies {
     testRuntimeOnly(libs.junit4)
 
     intellijPlatform {
-        intellijIdeaCommunity("2022.3")
+        intellijIdeaCommunity("2024.2")
 
         bundledPlugin("com.intellij.java")
         bundledPlugin("org.intellij.intelliLang")
@@ -53,7 +53,7 @@ dependencies {
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 tasks.withType<Test>().configureEach {
