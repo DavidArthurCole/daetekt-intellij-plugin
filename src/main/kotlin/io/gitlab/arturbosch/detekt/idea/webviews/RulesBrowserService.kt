@@ -60,13 +60,10 @@ class RulesBrowserService : Disposable {
         val ideTheme = if (isDarkTheme) "dark" else "light"
         browser.cefBrowser.executeJavaScript(
             """
-                if (localStorage.theme !== "$ideTheme") {
-                    (
-                        document.querySelector('.navbar-sidebar__brand button[class*="toggle"]')
-                        ?? document.querySelector('.navbar div[class*="colorModeToggle"] button')
-                    )
-                    ?.click();
-                }
+                try { localStorage.setItem("theme", "$ideTheme"); } catch (e) {}
+                document.documentElement.setAttribute("data-theme", "$ideTheme");
+                document.documentElement.setAttribute("data-theme-choice", "$ideTheme");
+                document.documentElement.style.colorScheme = "$ideTheme";
             """.trimIndent(),
             "about:blank",
             0,

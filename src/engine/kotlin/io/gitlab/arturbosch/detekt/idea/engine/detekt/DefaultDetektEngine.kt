@@ -69,16 +69,13 @@ class DefaultDetektEngine : DetektEngine {
         }
         config {
             useDefaultConfig = request.buildUponDefaultConfig
-            configPaths = request.configPaths
+            configPaths = if (request.enableFormatting) request.configPaths else request.configPaths + formattingOff(workspace)
         }
         baseline {
             path = request.baseline
         }
         extensions {
             fromPaths { request.pluginPaths }
-            if (!request.enableFormatting) {
-                disableExtension(KTLINT_RULE_SET_ID)
-            }
         }
         execution {
             executorService = request.executor
@@ -89,6 +86,9 @@ class DefaultDetektEngine : DetektEngine {
             errorChannel = request.errorChannel ?: Silent
         }
     }
+
+    private fun formattingOff(workspace: Path): Path =
+        workspace.resolve("daetekt-formatting-off.yml").apply { writeText("$KTLINT_RULE_SET_ID:\n  active: false\n") }
 
     private fun <T> withEngineContext(block: () -> T): T {
         val thread = Thread.currentThread()

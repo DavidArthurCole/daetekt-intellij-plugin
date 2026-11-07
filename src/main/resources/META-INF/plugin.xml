@@ -12,6 +12,7 @@
 
     <depends>com.intellij.modules.platform</depends>
     <depends optional="true" config-file="detekt-jcef.xml">com.intellij.modules.jcef</depends>
+    <depends optional="true" config-file="detekt-problems.xml">com.intellij.problemsView</depends>
 
     <idea-version since-build="242"/>
 

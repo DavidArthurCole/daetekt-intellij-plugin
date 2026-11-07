@@ -117,6 +117,23 @@ class DetektEngineIntegrationTest {
     }
 
     @Test
+    fun ktlintPropertiesOutsideTheWrapperSchemaPassValidationWithFormattingOff() {
+        val config = config(
+            """
+            config:
+              validation: true
+            ktlint:
+              Wrapping:
+                maxLineLength: 140
+            """
+        )
+
+        val outcome = engine.analyze(request(config = config, enableFormatting = false))
+
+        assertThat(outcome.configProblem).isNull()
+    }
+
+    @Test
     fun configExcludesMatchProjectRelativePath() {
         val config = config(
             """
