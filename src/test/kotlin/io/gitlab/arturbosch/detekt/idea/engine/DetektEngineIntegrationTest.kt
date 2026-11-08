@@ -3,6 +3,7 @@ package io.gitlab.arturbosch.detekt.idea.engine
 import io.gitlab.arturbosch.detekt.idea.engine.api.AnalysisRequest
 import io.gitlab.arturbosch.detekt.idea.engine.api.DetektEngine
 import io.gitlab.arturbosch.detekt.idea.engine.api.KTLINT_RULE_SET_ID
+import io.gitlab.arturbosch.detekt.idea.engine.api.RulesRequest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -118,9 +119,67 @@ class DetektEngineIntegrationTest {
 
     @Test
     fun pluginJarRulesAreDescribed() {
-        val rules = engine.describeRules(listOf(rulesJar))
+        val rules = engine.describeRules(rulesRequest())
 
         assertThat(rules.map { it.ruleId }).contains("FileMarker", "MagicNumber")
+    }
+
+    @Test
+    fun pluginJarRulesAreMarkedCustom() {
+        val rules = engine.describeRules(rulesRequest()).associateBy { it.ruleId }
+
+        assertThat(rules.getValue("FileMarker").custom).isTrue()
+        assertThat(rules.getValue("FileMarker").className).isEqualTo("io.gitlab.arturbosch.detekt.idea.testrules.FileMarker")
+        assertThat(rules.getValue("MagicNumber").custom).isFalse()
+    }
+
+    @Test
+    fun ruleActivationFollowsUserConfigOverDefaults() {
+        val config = config(
+            """
+            daetekt-test:
+              FileMarker:
+                active: true
+            style:
+              MagicNumber:
+                active: false
+            """
+        )
+
+        val rules = engine.describeRules(rulesRequest(config)).associateBy { it.ruleId }
+
+        assertThat(rules.getValue("FileMarker").active).isTrue()
+        assertThat(rules.getValue("TypeResolvedFileMarker").active).isFalse()
+        assertThat(rules.getValue("MagicNumber").active).isFalse()
+        assertThat(rules.getValue("MaxLineLength").active).isTrue()
+    }
+
+    @Test
+    fun configurationOptionsCarryDefaultsDescriptionsAndUserValues() {
+        val config = config(
+            """
+            style:
+              MagicNumber:
+                ignoreHashCodeFunction: false
+            """
+        )
+
+        val options = engine.describeRules(rulesRequest(config)).single { it.ruleId == "MagicNumber" }.options.associateBy { it.name }
+
+        assertThat(options.getValue("ignoreHashCodeFunction").description).isNotBlank()
+        assertThat(options.getValue("ignoreHashCodeFunction").defaultValue).isEqualTo("true")
+        assertThat(options.getValue("ignoreHashCodeFunction").configuredValue).isEqualTo("false")
+        assertThat(options).doesNotContainKey("active")
+    }
+
+    @Test
+    fun packagedRuleDocsProvideRationaleAndExamples() {
+        val marker = engine.describeRules(rulesRequest()).single { it.ruleId == "FileMarker" }
+
+        assertThat(marker.rationale).isNotBlank()
+        assertThat(marker.examples).hasSize(1)
+        assertThat(marker.examples.single().before).contains("class Demo")
+        assertThat(marker.examples.single().after).contains("class Demo")
     }
 
     @Test
@@ -175,6 +234,14 @@ class DetektEngineIntegrationTest {
     private fun config(yaml: String): Path = dir.resolve("detekt-${yaml.hashCode()}.yml").apply {
         writeText(yaml.trimIndent() + "\n")
     }
+
+    private fun rulesRequest(config: Path? = null) = RulesRequest(
+        pluginPaths = listOf(rulesJar),
+        configPaths = listOfNotNull(config),
+        buildUponDefaultConfig = true,
+        activateAllRules = false,
+        enableFormatting = false,
+    )
 
     private fun request(
         content: String = "package demo\n\nclass Demo\n",

@@ -4,6 +4,8 @@ import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.logger
+import com.intellij.openapi.editor.colors.EditorColorsManager
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.JBColor
@@ -12,9 +14,12 @@ import com.intellij.ui.jcef.JBCefBrowserBase
 import com.intellij.ui.jcef.JBCefJSQuery
 import com.intellij.util.ui.UIUtil
 import io.gitlab.arturbosch.detekt.idea.ConfiguredService
-import io.gitlab.arturbosch.detekt.idea.engine.api.RuleDescription
+import io.gitlab.arturbosch.detekt.idea.rules.RuleEntry
+import io.gitlab.arturbosch.detekt.idea.rules.RuleSource
 import io.gitlab.arturbosch.detekt.idea.rules.RulesTheme
+import io.gitlab.arturbosch.detekt.idea.rules.locateRuleSources
 import io.gitlab.arturbosch.detekt.idea.rules.rulesPage
+import java.awt.datatransfer.StringSelection
 import javax.swing.JComponent
 
 internal class RulesView(
@@ -24,19 +29,22 @@ internal class RulesView(
 
     private val logger = logger<RulesView>()
     private val browser = JBCefBrowser()
-    private val linkQuery = browserBase().let { JBCefJSQuery.create(it) }
-    private var rules: List<RuleDescription>? = null
+    private val bridge = browserBase().let { JBCefJSQuery.create(it) }
+    private var entries: List<RuleEntry>? = null
+    private var sources: Map<String, RuleSource> = emptyMap()
+    @Volatile
+    private var viewState: String? = null
 
     init {
         Disposer.register(this, browser)
-        Disposer.register(this, linkQuery)
-        linkQuery.addHandler { url ->
-            ApplicationManager.getApplication().invokeLater { openUrl(url) }
+        Disposer.register(this, bridge)
+        bridge.addHandler { message ->
+            handle(message.substringBefore('\n'), message.substringAfter('\n', ""))
             null
         }
         ApplicationManager.getApplication().messageBus.connect(this)
             .subscribe(LafManagerListener.TOPIC, LafManagerListener { render() })
-        browser.loadHTML(placeholder("Loading detekt rules..."))
+        show(emptyList(), "Loading detekt rules...")
     }
 
     val component: JComponent
@@ -44,45 +52,70 @@ internal class RulesView(
 
     private fun browserBase(): JBCefBrowserBase = browser
 
+    private fun handle(type: String, payload: String) {
+        if (type == "state") {
+            viewState = payload
+            return
+        }
+        ApplicationManager.getApplication().invokeLater({
+            when (type) {
+                "open" -> openUrl(payload)
+                "source" -> sources[payload]?.navigate(project)
+                "copy" -> CopyPasteManager.getInstance().setContents(StringSelection(payload))
+                "reload" -> reload()
+            }
+        }, project.disposed)
+    }
+
     fun reload() {
         val application = ApplicationManager.getApplication()
         application.executeOnPooledThread {
-            val loaded = runCatching { ConfiguredService(project).describeRules() }
+            val loaded = runCatching {
+                val rules = ConfiguredService(project).describeRules()
+                val located = runCatching { locateRuleSources(project, rules.filter { it.custom }.mapNotNull { it.className }) }
+                    .onFailure { logger.warn("Could not locate custom rule sources", it) }
+                    .getOrDefault(emptyMap())
+                rules.map { RuleEntry(it, it.className?.let(located::get)) } to located
+            }
             application.invokeLater({
                 loaded
-                    .onSuccess {
-                        rules = it
+                    .onSuccess { (rules, located) ->
+                        entries = rules
+                        sources = located
                         render()
                     }
                     .onFailure {
                         logger.warn("Could not load detekt rules", it)
-                        browser.loadHTML(placeholder("Could not load detekt rules: ${it.message}"))
+                        show(emptyList(), "Could not load detekt rules: ${it.message}")
                     }
             }, project.disposed)
         }
     }
 
     private fun render() {
-        val current = rules ?: return
-        browser.loadHTML(rulesPage(current, theme(), linkQuery.inject("url")))
+        show(entries ?: return, null)
     }
 
-    private fun placeholder(message: String): String {
-        val theme = theme()
-        return rulesPage(emptyList(), theme, "").replace("No detekt rules loaded.", message)
+    private fun show(rules: List<RuleEntry>, message: String?) {
+        browser.loadHTML(rulesPage(rules, theme(), bridge.inject("message"), message, viewState))
     }
 
     private fun theme(): RulesTheme {
         val font = UIUtil.getLabelFont()
+        val scheme = EditorColorsManager.getInstance().globalScheme
         return RulesTheme(
+            dark = !JBColor.isBright(),
             background = UIUtil.getPanelBackground(),
             foreground = UIUtil.getLabelForeground(),
             muted = UIUtil.getContextHelpForeground(),
             accent = JBColor.namedColor("Link.activeForeground", JBColor(0x2470B3, 0x589DF6)),
             surface = JBColor.namedColor("TextField.background", UIUtil.getPanelBackground()),
             border = JBColor.border(),
+            codeBackground = scheme.defaultBackground,
             fontFamily = font.family,
             fontSize = font.size,
+            codeFontFamily = scheme.editorFontName,
+            codeFontSize = scheme.editorFontSize,
         )
     }
 

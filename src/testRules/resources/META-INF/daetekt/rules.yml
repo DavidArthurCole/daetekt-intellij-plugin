@@ -1,0 +1,10 @@
+FileMarker:
+  rationale: |
+    Marks every file so the plugin can prove that custom rule jars are loaded.
+  examples:
+    - title: Any file
+      before: |
+        class Demo
+      after: |
+        class Demo
+      note: Every file is reported. There is nothing to fix.

@@ -15,6 +15,7 @@ import io.gitlab.arturbosch.detekt.idea.engine.api.AnalysisRequest
 import io.gitlab.arturbosch.detekt.idea.engine.api.DetektEngine
 import io.gitlab.arturbosch.detekt.idea.engine.api.FixTemplate
 import io.gitlab.arturbosch.detekt.idea.engine.api.RuleDescription
+import io.gitlab.arturbosch.detekt.idea.engine.api.RulesRequest
 import io.gitlab.arturbosch.detekt.idea.util.DirectExecutor
 import io.gitlab.arturbosch.detekt.idea.util.SimpleAppendable
 import io.gitlab.arturbosch.detekt.idea.util.absoluteBaselinePath
@@ -129,7 +130,15 @@ class ConfiguredService(
 
     private fun baseline(): Path? = absoluteBaselinePath(project, settings)
 
-    fun describeRules(): List<RuleDescription> = engine.describeRules(pluginPaths())
+    fun describeRules(): List<RuleDescription> = engine.describeRules(
+        RulesRequest(
+            pluginPaths = pluginPaths(),
+            configPaths = configPaths(),
+            buildUponDefaultConfig = settings.buildUponDefaultConfig,
+            activateAllRules = settings.enableAllRules,
+            enableFormatting = settings.enableFormatting,
+        )
+    )
 
     fun fixTemplates(): Map<String, List<FixTemplate>> {
         val path = sequenceOf(settings.fixTemplatesPath).filter { it.isNotBlank() }.asAbsolutePaths().firstOrNull()

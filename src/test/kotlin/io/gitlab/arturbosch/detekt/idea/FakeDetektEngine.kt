@@ -7,6 +7,7 @@ import io.gitlab.arturbosch.detekt.idea.engine.api.EngineFinding
 import io.gitlab.arturbosch.detekt.idea.engine.api.EngineSeverity
 import io.gitlab.arturbosch.detekt.idea.engine.api.FixTemplate
 import io.gitlab.arturbosch.detekt.idea.engine.api.RuleDescription
+import io.gitlab.arturbosch.detekt.idea.engine.api.RulesRequest
 import java.nio.file.Path
 
 class FakeDetektEngine(private val outcome: AnalysisOutcome = AnalysisOutcome.EMPTY) : DetektEngine {
@@ -22,7 +23,7 @@ class FakeDetektEngine(private val outcome: AnalysisOutcome = AnalysisOutcome.EM
         error("not used")
     }
 
-    override fun describeRules(pluginPaths: List<Path>): List<RuleDescription> = error("not used")
+    override fun describeRules(request: RulesRequest): List<RuleDescription> = error("not used")
 
     override fun loadFixTemplates(path: Path): Map<String, List<FixTemplate>> = error("not used")
 }

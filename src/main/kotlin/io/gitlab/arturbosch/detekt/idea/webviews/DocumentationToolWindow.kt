@@ -1,5 +1,6 @@
 package io.gitlab.arturbosch.detekt.idea.webviews
 
+import com.intellij.ide.BrowserUtil
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
@@ -32,8 +33,12 @@ class DocumentationToolWindow : ToolWindowFactory, DumbAware {
         val browser = RulesBrowserService.getInstance()
         val docsContent = factory.createContent(browser.getComponent(), DOCS_TAB, false).apply { setDisposer(browser) }
         val rules = RulesView(project) { url ->
-            browser.loadUrl(url)
-            contentManager.setSelectedContent(docsContent)
+            if (isDetektDocs(url)) {
+                browser.loadUrl(url)
+                contentManager.setSelectedContent(docsContent)
+            } else {
+                BrowserUtil.browse(url)
+            }
         }
         val rulesContent = factory.createContent(rules.component, RULES_TAB, false).apply { setDisposer(rules) }
 

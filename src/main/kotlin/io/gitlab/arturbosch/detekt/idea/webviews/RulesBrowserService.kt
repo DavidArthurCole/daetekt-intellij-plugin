@@ -1,5 +1,6 @@
 package io.gitlab.arturbosch.detekt.idea.webviews
 
+import com.intellij.ide.BrowserUtil
 import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationInfo
@@ -12,6 +13,8 @@ import com.intellij.util.applyIf
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.handler.CefLoadHandlerAdapter
+import org.cef.handler.CefRequestHandlerAdapter
+import org.cef.network.CefRequest
 import javax.swing.JComponent
 import javax.swing.UIManager
 
@@ -33,6 +36,23 @@ class RulesBrowserService : Disposable {
                 object : CefLoadHandlerAdapter() {
                     override fun onLoadEnd(browser: CefBrowser?, frame: CefFrame?, httpStatusCode: Int) {
                         updateStyles()
+                    }
+                },
+                this.cefBrowser,
+            )
+            jbCefClient.addRequestHandler(
+                object : CefRequestHandlerAdapter() {
+                    override fun onBeforeBrowse(
+                        browser: CefBrowser?,
+                        frame: CefFrame?,
+                        request: CefRequest?,
+                        userGesture: Boolean,
+                        isRedirect: Boolean,
+                    ): Boolean {
+                        val url = request?.url ?: return false
+                        if (frame?.isMain != true || isDetektDocs(url)) return false
+                        BrowserUtil.browse(url)
+                        return true
                     }
                 },
                 this.cefBrowser,

@@ -3,10 +3,16 @@ package io.gitlab.arturbosch.detekt.idea.webviews
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowManager
+import java.net.URI
 
 enum class DocsPage(val url: String) {
     Rules("https://detekt.dev/docs/rules/style"),
     Changelog("https://detekt.dev/changelog"),
+}
+
+internal fun isDetektDocs(url: String): Boolean {
+    val host = runCatching { URI(url).host }.getOrNull()?.lowercase() ?: return false
+    return host == "detekt.dev" || host.endsWith(".detekt.dev")
 }
 
 fun showPage(page: DocsPage, project: Project) {

@@ -11,7 +11,7 @@ interface DetektEngine {
 
     fun suppressInBaseline(baseline: Path, baselineId: String)
 
-    fun describeRules(pluginPaths: List<Path>): List<RuleDescription>
+    fun describeRules(request: RulesRequest): List<RuleDescription>
 
     fun loadFixTemplates(path: Path): Map<String, List<FixTemplate>>
 }
@@ -22,6 +22,14 @@ class FixTemplate(
     val ignoreCase: Boolean,
 )
 
+class RulesRequest(
+    val pluginPaths: List<Path>,
+    val configPaths: List<Path>,
+    val buildUponDefaultConfig: Boolean,
+    val activateAllRules: Boolean,
+    val enableFormatting: Boolean,
+)
+
 class RuleDescription(
     val ruleSetId: String,
     val ruleId: String,
@@ -29,6 +37,27 @@ class RuleDescription(
     val url: String?,
     val requiresTypeResolution: Boolean,
     val source: String?,
+    val className: String? = null,
+    val custom: Boolean = false,
+    val active: Boolean = false,
+    val autoCorrect: Boolean = false,
+    val options: List<RuleOption> = emptyList(),
+    val rationale: String? = null,
+    val examples: List<RuleExample> = emptyList(),
+)
+
+class RuleExample(
+    val title: String?,
+    val before: String?,
+    val after: String?,
+    val note: String?,
+)
+
+class RuleOption(
+    val name: String,
+    val description: String?,
+    val defaultValue: String?,
+    val configuredValue: String?,
 )
 
 class AnalysisRequest(
