@@ -15,7 +15,6 @@ import com.intellij.util.Consumer
 import org.apache.http.client.utils.URIBuilder
 import java.awt.Component
 
-// Turn off error reporting for now due to https://github.com/detekt/detekt-intellij-plugin/issues/271
 class GitHubErrorReporting : ErrorReportSubmitter() {
 
     override fun getReportActionText(): String = "Open GitHub Issue"
@@ -26,7 +25,7 @@ class GitHubErrorReporting : ErrorReportSubmitter() {
         parentComponent: Component,
         consumer: Consumer<in SubmittedReportInfo>,
     ): Boolean {
-        val uri = URIBuilder("https://github.com/detekt/detekt-intellij-plugin/issues/new")
+        val uri = URIBuilder("https://github.com/DavidArthurCole/intellijekt/issues/new")
             .addParameter("title", events.mapNotNull { it.throwableText.firstLine() }.joinToString("; "))
             .addParameter("labels", "bug")
             .addParameter("body", "Please copy paste the generated bug report.")
