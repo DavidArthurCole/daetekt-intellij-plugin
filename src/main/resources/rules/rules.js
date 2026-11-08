@@ -35,14 +35,14 @@ const TOTALS = counts(RULES);
 
 const STATUS_OPTIONS = [
     { value: 'all', label: 'All', tone: 'var(--fg)' },
-    { value: 'active', label: 'Active', tone: 'var(--active)', swatch: 'on', count: TOTALS.active, tip: 'Rules enabled by your current detekt settings and configuration.' },
-    { value: 'inactive', label: 'Inactive', tone: 'var(--muted)', swatch: 'off', count: TOTALS.total - TOTALS.active, tip: 'Rules that are loaded but not enabled.' },
+    { value: 'active', label: 'Active', tone: 'var(--active)', count: TOTALS.active, tip: 'Enabled by your settings' },
+    { value: 'inactive', label: 'Inactive', tone: 'var(--inactive)', count: TOTALS.total - TOTALS.active, tip: 'Loaded but not enabled' },
 ];
 
 const ORIGIN_OPTIONS = [
     { value: 'all', label: 'All', tone: 'var(--fg)' },
-    { value: 'builtin', label: 'Built-in', tone: 'var(--accent)', swatch: 'on', count: TOTALS.total - TOTALS.custom, tip: 'Rules that ship with detekt.' },
-    { value: 'custom', label: 'Custom', tone: 'var(--custom)', swatch: 'on', count: TOTALS.custom, tip: 'Rules loaded from the plugin jars in the detekt settings.' },
+    { value: 'builtin', label: 'Built-in', tone: 'var(--accent)', count: TOTALS.total - TOTALS.custom, tip: 'Ships with detekt' },
+    { value: 'custom', label: 'Custom', tone: 'var(--custom)', count: TOTALS.custom, tip: 'From your plugin jars' },
 ];
 
 const FLAGS = [
@@ -58,19 +58,19 @@ const TAGS = [
         icon: 'custom',
         test: r => r.custom,
         hidden: () => state.origin === 'custom' || state.group === 'origin',
-        tip: r => ['Custom rule', 'Loaded from ' + (r.jar || 'a plugin jar') + ', one of the plugin jars in the detekt settings.'],
+        tip: r => ['Custom rule', r.jar],
     },
     {
         cls: 'fix',
         icon: 'fix',
         test: r => r.autoCorrect,
-        tip: () => ['Auto-correct', 'detekt can fix findings of this rule. Run Refactor > AutoCorrect by detekt Rules.'],
+        tip: () => ['Auto-correctable', null],
     },
     {
         cls: 'type',
         icon: 'type',
         test: r => r.typeRes,
-        tip: () => ['Needs type resolution', 'The editor analyzes files without type information, so this rule never reports here. It only runs in Gradle tasks with type resolution, such as detektMain.'],
+        tip: () => ['Needs type resolution', 'Not run in the editor'],
     },
 ];
 
@@ -286,11 +286,10 @@ function segmented(name, options) {
     for (const option of options) {
         const button = h('button', {
             role: 'radio',
-            'data-tip': option.tip ? option.label : null,
-            'data-tip-body': option.tip,
+            style: '--tone: ' + option.tone,
+            'data-tip': option.tip,
             onclick: () => update({ [name]: option.value }),
         },
-            option.swatch ? h('span', { class: 'swatch ' + option.swatch, style: '--sw: ' + option.tone }) : null,
             option.label,
             option.count != null ? h('span', { class: 'count' }, String(option.count)) : null);
         buttons.set(option.value, button);
@@ -528,13 +527,12 @@ function ruleView(rule, term, showSet) {
         article.classList.toggle('open', open);
         if (open) openRules.add(id); else openRules.delete(id);
     };
-    const head = h('div', {
-        class: 'rule-head',
-        onclick: () => {
-            article.setOpen(!article.classList.contains('open'));
-            save();
-        },
-    },
+    article.addEventListener('click', e => {
+        if (e.target.closest('.details, button, a') || String(window.getSelection())) return;
+        article.setOpen(!article.classList.contains('open'));
+        save();
+    });
+    const head = h('div', { class: 'rule-head' },
         icon('chevron', 'chev'),
         h('span', {
             class: 'dot' + (rule.active ? '' : ' off'),

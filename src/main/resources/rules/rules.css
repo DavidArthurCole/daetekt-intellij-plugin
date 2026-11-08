@@ -2,6 +2,7 @@
     --bad: #cf222e;
     --good: #1a7f37;
     --active: #2da44e;
+    --inactive: #bc4c00;
     --warn: #b07800;
     --custom: #8250df;
     --kw: #0033b3;
@@ -22,6 +23,7 @@
     --bad: #f47067;
     --good: #57ab5a;
     --active: #57ab5a;
+    --inactive: #e0823d;
     --warn: #d4a72c;
     --custom: #b083f0;
     --kw: #cf8e6d;
@@ -210,8 +212,8 @@ mark {
     left: 0;
     z-index: -1;
     border-radius: 6px;
-    background: color-mix(in srgb, var(--tone) 18%, var(--surface));
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 55%, transparent), 0 1px 2px rgba(0, 0, 0, 0.18);
+    background: color-mix(in srgb, var(--tone) 24%, var(--surface));
+    box-shadow: inset 0 0 0 1px var(--tone), 0 1px 2px rgba(0, 0, 0, 0.18);
 }
 
 .segmented.ready .thumb {
@@ -224,32 +226,27 @@ mark {
     gap: 6px;
     border: 0;
     border-radius: 6px;
-    background: transparent;
+    background: color-mix(in srgb, var(--tone) 7%, transparent);
     padding: 2px 10px;
     font-size: 0.9em;
-    color: var(--muted);
+    font-weight: 500;
+    color: color-mix(in srgb, var(--tone) 72%, var(--muted));
     transition: color var(--fast) var(--ease), background var(--fast) var(--ease);
 }
 
+.segmented button + button {
+    margin-left: 2px;
+}
+
 .segmented button:hover:not(.on) {
-    color: var(--fg);
-    background: var(--hover);
+    color: var(--tone);
+    background: color-mix(in srgb, var(--tone) 15%, transparent);
 }
 
 .segmented button.on {
-    color: var(--fg);
-}
-
-.swatch {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--sw);
-}
-
-.swatch.off {
+    color: color-mix(in srgb, var(--tone) 82%, black);
     background: transparent;
-    box-shadow: inset 0 0 0 1.5px var(--sw);
+    font-weight: 600;
 }
 
 .count {
@@ -532,12 +529,13 @@ main.enter {
     transform: rotate(-90deg);
 }
 
-.group-head:hover .chev, .rule-head:hover .chev {
+.group-head:hover .chev, .rule:hover:not(:has(.details:hover)) > .rule-head .chev {
     color: var(--fg);
 }
 
 .rule {
     position: relative;
+    cursor: pointer;
     margin: 2px 0;
     border-radius: 8px;
     border: 1px solid transparent;
@@ -579,7 +577,6 @@ main.enter {
     align-items: center;
     gap: 8px;
     padding: 8px 10px 0;
-    cursor: pointer;
     user-select: none;
 }
 
@@ -590,15 +587,11 @@ main.enter {
     transition: color var(--fast) var(--ease);
 }
 
-.rule-head:hover h3 {
-    color: var(--accent);
-}
-
 .rule.inactive .rule-head h3 {
     color: var(--muted);
 }
 
-.rule.inactive .rule-head:hover h3 {
+.rule:hover:not(:has(.details:hover)) > .rule-head h3 {
     color: var(--accent);
 }
 
@@ -667,6 +660,7 @@ main.enter {
     flex-direction: column;
     gap: 16px;
     padding: 6px 12px 12px 46px;
+    cursor: auto;
 }
 
 .rule.open .details {
@@ -860,17 +854,17 @@ main.enter {
 .tip {
     position: fixed;
     z-index: 20;
-    max-width: 280px;
+    max-width: 240px;
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 6px 9px;
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    background: var(--surface);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
-    font-size: 0.85em;
-    line-height: 1.4;
+    gap: 1px;
+    padding: 4px 8px;
+    border-radius: 5px;
+    background: color-mix(in srgb, var(--fg) 94%, var(--bg));
+    color: var(--bg);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+    font-size: 0.82em;
+    line-height: 1.35;
     pointer-events: none;
     opacity: 0;
     transform: translateY(var(--tip-shift, -4px));
@@ -887,7 +881,7 @@ main.enter {
 }
 
 .tip span {
-    color: var(--muted);
+    color: color-mix(in srgb, var(--bg) 68%, var(--fg));
     overflow-wrap: anywhere;
 }
 
