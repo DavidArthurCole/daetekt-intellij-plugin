@@ -3,6 +3,7 @@ import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask
 import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
 import org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode
+import org.jetbrains.kotlin.gradle.dsl.jvm.JvmTargetValidationMode
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -46,6 +47,7 @@ dependencies {
         bundledPlugin("com.intellij.java")
         bundledPlugin("org.intellij.intelliLang")
         bundledPlugin("org.jetbrains.kotlin")
+        bundledPlugin("com.intellij.gradle")
 
         testFramework(TestFrameworkType.Platform)
 
@@ -58,6 +60,14 @@ kotlin {
     compilerOptions {
         jvmDefault = JvmDefaultMode.NO_COMPATIBILITY
     }
+}
+
+tasks.compileJava {
+    options.release = 21
+}
+
+tasks.compileKotlin {
+    jvmTargetValidationMode = JvmTargetValidationMode.IGNORE
 }
 
 val engineJar = tasks.register<Jar>("engineJar") {

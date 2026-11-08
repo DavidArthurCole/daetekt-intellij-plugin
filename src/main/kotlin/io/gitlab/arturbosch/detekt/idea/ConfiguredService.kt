@@ -146,6 +146,7 @@ class ConfiguredService(
     fun execute(file: PsiFile, autoCorrect: Boolean): AnalysisOutcome {
         val pathToAnalyze = file.virtualFile?.canonicalPath ?: return AnalysisOutcome.EMPTY
         if (!Files.isRegularFile(Path(pathToAnalyze))) return AnalysisOutcome.EMPTY
+        if (!DetektSources.getInstance(project).includes(Path(pathToAnalyze))) return AnalysisOutcome.EMPTY
         val content = runCatching { ApplicationManager.getApplication().runReadAction(Computable { file.text }) }
             .onFailure {
                 logErrorIfAllowed(

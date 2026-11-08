@@ -1,0 +1,10 @@
+<idea-plugin>
+    <extensions defaultExtensionNs="org.jetbrains.plugins.gradle">
+        <projectResolve implementation="io.gitlab.arturbosch.detekt.idea.gradle.DetektGradleResolver"/>
+    </extensions>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <externalProjectDataService implementation="io.gitlab.arturbosch.detekt.idea.gradle.DetektSourcesDataService"/>
+        <postStartupActivity implementation="io.gitlab.arturbosch.detekt.idea.gradle.DetektGradleStartup"/>
+    </extensions>
+</idea-plugin>

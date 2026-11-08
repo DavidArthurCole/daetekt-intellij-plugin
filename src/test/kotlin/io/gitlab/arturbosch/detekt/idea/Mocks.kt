@@ -20,6 +20,7 @@ fun mockProject(): MockProject =
     }.apply {
         registerService(DetektPluginSettings::class.java)
         registerService(DetektSettingsMigration::class.java)
+        registerService(DetektSources::class.java)
     }
 
 fun heavyMockProject(rootDisposable: Disposable): MockProject = mockProject().apply {
