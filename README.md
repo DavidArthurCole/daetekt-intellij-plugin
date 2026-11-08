@@ -2,7 +2,7 @@
 
 [![Join the DVD Discord for support](https://img.shields.io/discord/1497680181274345585)](https://discord.davidarthurcole.me/)
 ![Pre Merge Checks](https://github.com/DavidArthurCole/daetekt-intellij-plugin/workflows/Pre%20Merge%20Checks/badge.svg)
-[![JetBrains Plugin](https://img.shields.io/jetbrains/plugin/v/10761-detekt.svg)](https://plugins.jetbrains.com/plugin/10761-detekt)
+[![JetBrains Plugin](https://img.shields.io/jetbrains/plugin/v/35914-daetekt.svg)](https://plugins.jetbrains.com/plugin/35914-daetekt)
 [![License](https://img.shields.io/github/license/DavidArthurCole/daetekt-intellij-plugin.svg)](LICENSE)
 
 Integrates _detekt_, a static code analysis tool for the Kotlin programming language, into IntelliJ.
@@ -13,7 +13,7 @@ Versus the upstream **[detekt-intellij-plugin](https://github.com/detekt/detekt-
 
 ![detekt in action](./img/detekt.png "detekt in action")
 
-The plugin can be downloaded from the [Jetbrains plugin repository](https://plugins.jetbrains.com/plugin/10761-detekt).
+The plugin can be downloaded from the [Jetbrains plugin repository](https://plugins.jetbrains.com/plugin/35914-daetekt).
 
 ## Enabling the plugin
 
