@@ -2,8 +2,8 @@
     <id>daetekt</id>
     <name>daetekt</name>
     <category>Tools Integration</category>
-    <vendor email="arturbosch@gmx.de" url="https://github.com/detekt">
-        detekt
+    <vendor email="mail@davidarthurcole.me" url="https://github.com/DavidArthurCole">
+        DavidArthurCole/daetekt
     </vendor>
 
     <description><![CDATA[

@@ -1,12 +1,15 @@
-# IntelliJ Detekt Plugin
+# IntelliJ Daetekt Plugin
 
-[![Join the chat at https://kotlinlang.slack.com/messages/C88E12QH4/convo/C0BQ5GZ0S-1511956674.000289/](https://img.shields.io/badge/chat-on_slack-red.svg?style=flat-square)](https://kotlinlang.slack.com/messages/C88E12QH4/convo/C0BQ5GZ0S-1511956674.000289/)
-![Pre Merge Checks](https://github.com/detekt/detekt-intellij-plugin/workflows/Pre%20Merge%20Checks/badge.svg)
-[![JetBrains Plugins](https://img.shields.io/jetbrains/plugin/v/10761-detekt.svg)](https://plugins.jetbrains.com/plugin/10761-detekt)
-[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Farturbosch%2Fdetekt-intellij-plugin.svg?type=small)](https://app.fossa.io/projects/git%2Bgithub.com%2Farturbosch%2Fdetekt-intellij-plugin?ref=badge_large)
-[![License](https://img.shields.io/github/license/detekt/detekt-intellij-plugin.svg)](LICENSE)
+[![Join the DVD Discord for support](https://img.shields.io/discord/1497680181274345585)](https://discord.davidarthurcole.me/)
+![Pre Merge Checks](https://github.com/DavidArthurCole/daetekt-intellij-plugin/workflows/Pre%20Merge%20Checks/badge.svg)
+[![JetBrains Plugin](https://img.shields.io/jetbrains/plugin/v/10761-detekt.svg)](https://plugins.jetbrains.com/plugin/10761-detekt)
+[![License](https://img.shields.io/github/license/DavidArthurCole/daetekt-intellij-plugin.svg)](LICENSE)
 
 Integrates _detekt_, a static code analysis tool for the Kotlin programming language, into IntelliJ.
+Versus the upstream **[detekt-intellij-plugin](https://github.com/detekt/detekt-intellij-plugin)** (from which this repository is forked), this version integrates with:
+- detekt 2.0.0-alpha6
+- Java 21
+- Kotlin 2.3+
 
 ![detekt in action](./img/detekt.png "detekt in action")
 
@@ -52,5 +55,3 @@ To test your development, use task `runIde` which will automatically run an Inte
 # windows
 gradlew runIde
 ```
-
-Also install the current `Detekt IntelliJ Plugin` version  to verify you do not introduce new issues.
