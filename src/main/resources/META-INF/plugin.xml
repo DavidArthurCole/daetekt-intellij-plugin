@@ -70,14 +70,13 @@
 
     <change-notes><![CDATA[
       <ul>
-        <li>2.5.0d
+        <li>2.5.0
             <br>
             <ul>
                 <li>Based on detekt 2.0.0-alpha6</li>
                 <li>Dropped support for IntelliJ earlier than 2024.3</li>
                 <li>Gradle, Java, and Kotlin updates</li>
                 <li>So so much more...</li>
-                <li>Future versions will be denoted as `d` to indicate `daetekt`</li>
             </ul>
         </li>
         <li>2.4.3

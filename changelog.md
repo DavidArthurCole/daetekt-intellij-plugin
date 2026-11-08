@@ -1,11 +1,10 @@
 ### Changelog
 
-#### 2.5.0d
+#### 2.5.0
 - Based on detekt 2.0.0-alpha6
 - Dropped support for IntelliJ earlier than 2024.3
 - Gradle, Java, and Kotlin updates
 - So so much more...
-- Future versions will be denoted as `d` to indicate `daetekt`
 
 #### 2.4.3
 
