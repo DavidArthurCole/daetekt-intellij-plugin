@@ -118,7 +118,7 @@ function h(tag, attrs, ...children) {
             else el.setAttribute(name, value === true ? '' : value);
         }
     }
-    for (const child of children.flat()) {
+    for (const child of children.flat(Infinity)) {
         if (child == null || child === false) continue;
         el.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
     }
