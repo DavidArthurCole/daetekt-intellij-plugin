@@ -7,7 +7,7 @@
     </vendor>
 
     <description><![CDATA[
-        Plugin for <a href="https://detekt.github.io/detekt">detekt</a>, static code analysis for kotlin.
+        Plugin for <a href="https://detekt.dev">detekt</a>, static code analysis for kotlin.
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>

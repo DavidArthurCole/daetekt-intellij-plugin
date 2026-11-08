@@ -142,8 +142,8 @@ intellijPlatform {
 
 githubRelease {
     token((project.findProperty("github.token") as? String).orEmpty())
-    owner.set("detekt")
-    repo.set("detekt-intellij-plugin")
+    owner.set("DavidArthurCole")
+    repo.set("intellijekt")
     targetCommitish.set("main")
     overwrite.set(true)
     dryRun.set(false)
