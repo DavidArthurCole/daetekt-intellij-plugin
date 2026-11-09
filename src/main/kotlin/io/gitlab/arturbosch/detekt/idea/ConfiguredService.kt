@@ -238,7 +238,9 @@ class ConfiguredService(
         var last = AnalysisOutcome.EMPTY
         for (pass in 1..MAX_CORRECTION_PASSES) {
             ProgressManager.checkCanceled()
-            last = execute(current, filename, true, compile, only)
+            last = runCatching { execute(current, filename, true, compile, only) }
+                .onFailure { logErrorIfAllowed(it, "detekt failed on correction pass $pass; keeping earlier passes") }
+                .getOrNull() ?: break
             val next = last.correctedContent
             if (last.configProblem != null || next == null || next == current) break
             current = next

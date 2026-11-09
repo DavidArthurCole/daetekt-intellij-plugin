@@ -64,10 +64,13 @@ class AutoCorrectAction : AnAction(PluginUtils.pluginIcon()) {
                     showNotification(problems, project)
                     return
                 }
-                val corrected = service.execute(psiFile, autoCorrect = true, only = only).correctedContent
+                val outcome = service.execute(psiFile, autoCorrect = true, only = only)
+                val corrected = outcome.correctedContent
                 if (corrected == null) {
                     if (only != null) {
-                        showNotification(title, DetektBundle.message("detekt.actions.autoCorrectNoChange", only.ruleId), project)
+                        val stillReported = outcome.findings.any { it.ruleId == only.ruleId && (only.line == null || it.line == only.line) }
+                        val key = if (stillReported) "detekt.actions.autoCorrectDeclined" else "detekt.actions.autoCorrectNotReported"
+                        showNotification(title, DetektBundle.message(key, only.ruleId, only.line ?: "-"), project)
                     }
                     return
                 }

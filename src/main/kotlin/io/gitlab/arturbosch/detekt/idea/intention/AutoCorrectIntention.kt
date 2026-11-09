@@ -29,7 +29,7 @@ class AutoCorrectIntention(private val finding: EngineFinding? = null) : Intenti
     override fun isAvailable(project: Project, editor: Editor, file: PsiFile): Boolean = file.isWritable
 
     override fun invoke(project: Project, editor: Editor, file: PsiFile) {
-        AutoCorrectAction().runAction(project, file, finding?.let { RuleRef(it.ruleSetId, it.ruleId) })
+        AutoCorrectAction().runAction(project, file, finding?.let { RuleRef(it.ruleSetId, it.ruleId, it.line) })
     }
 
     private fun summary(message: String): String {
@@ -42,4 +42,4 @@ class AutoCorrectIntention(private val finding: EngineFinding? = null) : Intenti
     }
 }
 
-class RuleRef(val ruleSetId: String, val ruleId: String)
+class RuleRef(val ruleSetId: String, val ruleId: String, val line: Int? = null)
