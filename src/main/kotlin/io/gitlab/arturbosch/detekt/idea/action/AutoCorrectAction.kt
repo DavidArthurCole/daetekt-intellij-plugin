@@ -4,8 +4,12 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.logger
+import com.intellij.openapi.editor.Document
+import com.intellij.openapi.progress.ProgressIndicator
+import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
@@ -47,30 +51,44 @@ class AutoCorrectAction : AnAction(PluginUtils.pluginIcon()) {
     }
 
     internal fun runAction(project: Project, psiFile: PsiFile, only: RuleRef? = null) {
-        val service = ConfiguredService(project)
-        val problems = service.validate()
-        if (problems.isNotEmpty()) {
-            showNotification(problems, project)
-            return
-        }
-        val document = PsiDocumentManager.getInstance(project).getDocument(psiFile) ?: return
+        val documents = PsiDocumentManager.getInstance(project)
+        val document = documents.getDocument(psiFile) ?: return
+        documents.commitDocument(document)
         val stamp = document.modificationStamp
-        val corrected = service.execute(psiFile, autoCorrect = true, only = only).correctedContent
-        if (corrected == null) {
-            if (only != null) {
-                showNotification(
-                    title = DetektBundle.message("detekt.actions.autoCorrect"),
-                    content = DetektBundle.message("detekt.actions.autoCorrectNoChange", only.ruleId),
-                    project = project,
-                )
+        val title = DetektBundle.message("detekt.actions.autoCorrect")
+        object : Task.Backgroundable(project, title, true) {
+            override fun run(indicator: ProgressIndicator) {
+                val service = ConfiguredService(project)
+                val problems = service.validate()
+                if (problems.isNotEmpty()) {
+                    showNotification(problems, project)
+                    return
+                }
+                val corrected = service.execute(psiFile, autoCorrect = true, only = only).correctedContent
+                if (corrected == null) {
+                    if (only != null) {
+                        showNotification(title, DetektBundle.message("detekt.actions.autoCorrectNoChange", only.ruleId), project)
+                    }
+                    return
+                }
+                ApplicationManager.getApplication().invokeLater({
+                    if (document.modificationStamp != stamp) return@invokeLater
+                    WriteCommandAction.runWriteCommandAction(project, title, null, {
+                        replaceChangedRange(document, corrected)
+                        documents.commitDocument(document)
+                    }, psiFile)
+                }, project.disposed)
             }
-            return
-        }
-        WriteCommandAction.runWriteCommandAction(project, DetektBundle.message("detekt.actions.autoCorrect"), null, {
-            if (document.modificationStamp == stamp) {
-                document.setText(corrected)
-                PsiDocumentManager.getInstance(project).commitDocument(document)
-            }
-        }, psiFile)
+        }.queue()
     }
+}
+
+internal fun replaceChangedRange(document: Document, corrected: String) {
+    val current = document.charsSequence
+    val limit = minOf(current.length, corrected.length)
+    var prefix = 0
+    while (prefix < limit && current[prefix] == corrected[prefix]) prefix++
+    var suffix = 0
+    while (suffix < limit - prefix && current[current.length - 1 - suffix] == corrected[corrected.length - 1 - suffix]) suffix++
+    document.replaceString(prefix, current.length - suffix, corrected.subSequence(prefix, corrected.length - suffix))
 }

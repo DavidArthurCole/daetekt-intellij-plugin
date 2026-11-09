@@ -5,12 +5,16 @@ import com.intellij.openapi.util.Computable
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.progress.ProcessCanceledException
+import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.roots.OrderEnumerator
 import com.intellij.openapi.roots.ProjectFileIndex
+import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.psi.PsiFile
+import com.intellij.psi.util.CachedValueProvider
+import com.intellij.psi.util.CachedValuesManager
 import io.gitlab.arturbosch.detekt.idea.config.DetektPluginSettings
 import io.gitlab.arturbosch.detekt.idea.engine.EngineLoader
 import io.gitlab.arturbosch.detekt.idea.engine.api.AnalysisOutcome
@@ -27,8 +31,11 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.path.Path
 import kotlin.io.path.exists
+
+private const val MAX_CORRECTION_PASSES = 10
 
 internal fun jarsIn(directory: Path?): List<Path> {
     if (directory == null || !Files.isDirectory(directory)) {
@@ -122,11 +129,16 @@ class ConfiguredService(
             if (module == null) {
                 CompileContext.NONE
             } else {
-                CompileContext(
-                    classpath = OrderEnumerator.orderEntries(module).recursively().withoutSdk().classes()
-                        .pathsList.pathList.map { Path(it) }.filter { Files.exists(it) },
-                    jdkHome = ModuleRootManager.getInstance(module).sdk?.homePath?.let { Path(it) },
-                )
+                CachedValuesManager.getManager(project).getCachedValue(module) {
+                    CachedValueProvider.Result.create(
+                        CompileContext(
+                            classpath = OrderEnumerator.orderEntries(module).recursively().withoutSdk().classes()
+                                .pathsList.pathList.map { Path(it) }.filter { Files.exists(it) },
+                            jdkHome = ModuleRootManager.getInstance(module).sdk?.homePath?.let { Path(it) },
+                        ),
+                        ProjectRootManager.getInstance(project),
+                    )
+                }
             }
         })
 
@@ -172,9 +184,13 @@ class ConfiguredService(
     fun fixTemplates(): Map<String, List<FixTemplate>> {
         val path = sequenceOf(settings.fixTemplatesPath).filter { it.isNotBlank() }.asAbsolutePaths().firstOrNull()
         if (path == null || !Files.isRegularFile(path)) return emptyMap()
-        return runCatching { engine.loadFixTemplates(path) }
+        val stamp = runCatching { Files.getLastModifiedTime(path).toMillis() }.getOrDefault(0L)
+        templateCache.get()?.takeIf { it.path == path && it.stamp == stamp }?.let { return it.templates }
+        val templates = runCatching { engine.loadFixTemplates(path) }
             .onFailure { logger.warn("Could not read fix templates from $path", it) }
             .getOrDefault(emptyMap())
+        templateCache.set(CachedTemplates(path, stamp, templates))
+        return templates
     }
 
     fun suppressInBaseline(baselineId: String) {
@@ -201,9 +217,33 @@ class ConfiguredService(
             }
             .getOrThrow()
         val compile = compileContext(file)
-        return runCatching { execute(content, pathToAnalyze, autoCorrect, compile, only) }
+        return runCatching {
+            if (autoCorrect) {
+                correctUntilStable(content, pathToAnalyze, compile, only)
+            } else {
+                execute(content, pathToAnalyze, false, compile, only)
+            }
+        }
             .onFailure { logErrorIfAllowed(it, "Unexpected error while running detekt analysis") }
             .getOrDefault(AnalysisOutcome.EMPTY)
+    }
+
+    private fun correctUntilStable(
+        content: String,
+        filename: String,
+        compile: CompileContext,
+        only: RuleRef?,
+    ): AnalysisOutcome {
+        var current = content
+        var last = AnalysisOutcome.EMPTY
+        for (pass in 1..MAX_CORRECTION_PASSES) {
+            ProgressManager.checkCanceled()
+            last = execute(current, filename, true, compile, only)
+            val next = last.correctedContent
+            if (last.configProblem != null || next == null || next == current) break
+            current = next
+        }
+        return AnalysisOutcome(last.findings, current.takeIf { it != content }, last.configProblem)
     }
 
     private fun logErrorIfAllowed(error: Throwable, message: String) {
@@ -227,6 +267,10 @@ class ConfiguredService(
         return engine.analyze(request(fileContent, filename, autoCorrect, compile, only))
     }
 }
+
+private class CachedTemplates(val path: Path, val stamp: Long, val templates: Map<String, List<FixTemplate>>)
+
+private val templateCache = AtomicReference<CachedTemplates?>()
 
 class CompileContext(val classpath: List<Path>, val jdkHome: Path?) {
 

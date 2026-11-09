@@ -3,6 +3,7 @@ package io.gitlab.arturbosch.detekt.idea.intention
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.codeInsight.intention.IntentionAction
 import com.intellij.codeInsight.intention.PriorityAction
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
@@ -31,7 +32,10 @@ class AddToBaselineAction(private val finding: EngineFinding) : IntentionAction,
     }
 
     override fun invoke(project: Project, editor: Editor, file: PsiFile) {
-        ConfiguredService(project).suppressInBaseline(finding.baselineId)
-        DaemonCodeAnalyzer.getInstance(project).restart(file)
+        val application = ApplicationManager.getApplication()
+        application.executeOnPooledThread {
+            ConfiguredService(project).suppressInBaseline(finding.baselineId)
+            application.invokeLater({ DaemonCodeAnalyzer.getInstance(project).restart(file) }, project.disposed)
+        }
     }
 }
