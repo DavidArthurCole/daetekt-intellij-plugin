@@ -83,6 +83,7 @@ class DetektAnnotator : ExternalAnnotator<PsiFile, DetektAnnotations>() {
                 val edit = template.editWithin(text, textRange.startOffset, textRange.endOffset) ?: continue
                 annotationBuilder.withFix(ApplyFixTemplateAction(template, textRange, edit.original))
             }
+            annotationBuilder.withFix(AutoCorrectIntention(finding))
             annotationBuilder.withFix(AutoCorrectIntention())
             if (finding.ruleSetId != KTLINT_RULE_SET_ID) {
                 annotationBuilder.withFix(AddToBaselineAction(finding))

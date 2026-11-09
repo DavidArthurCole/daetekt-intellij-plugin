@@ -5,6 +5,7 @@ import dev.detekt.api.Configuration
 import dev.detekt.api.Issue
 import dev.detekt.api.RequiresAnalysisApi
 import dev.detekt.api.Rule
+import dev.detekt.api.RuleSetId
 import dev.detekt.api.RuleSetProvider
 import dev.detekt.api.Severity
 import dev.detekt.api.suppressed
@@ -233,6 +234,11 @@ class DefaultDetektEngine : DetektEngine {
             autoCorrect = request.autoCorrect
             activateAllRules = request.activateAllRules
             failurePolicy = RulesSpec.FailurePolicy.NeverFail
+            val ruleSetId = request.onlyRuleSetId
+            val ruleId = request.onlyRuleId
+            if (ruleSetId != null && ruleId != null) {
+                runPolicy = RulesSpec.RunPolicy.RestrictToSingleRule(RuleSetId(ruleSetId), ruleId)
+            }
         }
         config {
             useDefaultConfig = request.buildUponDefaultConfig

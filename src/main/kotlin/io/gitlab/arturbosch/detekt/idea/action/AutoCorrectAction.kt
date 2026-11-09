@@ -13,6 +13,7 @@ import com.intellij.psi.PsiManager
 import io.gitlab.arturbosch.detekt.idea.ConfiguredService
 import io.gitlab.arturbosch.detekt.idea.DetektBundle
 import io.gitlab.arturbosch.detekt.idea.KOTLIN_FILE_EXTENSIONS
+import io.gitlab.arturbosch.detekt.idea.intention.RuleRef
 import io.gitlab.arturbosch.detekt.idea.util.PluginUtils
 import io.gitlab.arturbosch.detekt.idea.util.isDetektEnabled
 import io.gitlab.arturbosch.detekt.idea.util.showNotification
@@ -45,7 +46,7 @@ class AutoCorrectAction : AnAction(PluginUtils.pluginIcon()) {
             .getOrThrow()
     }
 
-    internal fun runAction(project: Project, psiFile: PsiFile) {
+    internal fun runAction(project: Project, psiFile: PsiFile, only: RuleRef? = null) {
         val service = ConfiguredService(project)
         val problems = service.validate()
         if (problems.isNotEmpty()) {
@@ -54,7 +55,17 @@ class AutoCorrectAction : AnAction(PluginUtils.pluginIcon()) {
         }
         val document = PsiDocumentManager.getInstance(project).getDocument(psiFile) ?: return
         val stamp = document.modificationStamp
-        val corrected = service.execute(psiFile, autoCorrect = true).correctedContent ?: return
+        val corrected = service.execute(psiFile, autoCorrect = true, only = only).correctedContent
+        if (corrected == null) {
+            if (only != null) {
+                showNotification(
+                    title = DetektBundle.message("detekt.actions.autoCorrect"),
+                    content = DetektBundle.message("detekt.actions.autoCorrectNoChange", only.ruleId),
+                    project = project,
+                )
+            }
+            return
+        }
         WriteCommandAction.runWriteCommandAction(project, DetektBundle.message("detekt.actions.autoCorrect"), null, {
             if (document.modificationStamp == stamp) {
                 document.setText(corrected)

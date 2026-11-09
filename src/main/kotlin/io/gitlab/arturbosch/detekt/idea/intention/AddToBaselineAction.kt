@@ -2,7 +2,7 @@ package io.gitlab.arturbosch.detekt.idea.intention
 
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.codeInsight.intention.IntentionAction
-import com.intellij.codeInsight.intention.LowPriorityAction
+import com.intellij.codeInsight.intention.PriorityAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
@@ -15,11 +15,13 @@ import io.gitlab.arturbosch.detekt.idea.engine.api.EngineFinding
 import io.gitlab.arturbosch.detekt.idea.util.absoluteBaselinePath
 import kotlin.io.path.exists
 
-class AddToBaselineAction(private val finding: EngineFinding) : IntentionAction, LowPriorityAction {
+class AddToBaselineAction(private val finding: EngineFinding) : IntentionAction, PriorityAction {
+
+    override fun getPriority(): PriorityAction.Priority = PriorityAction.Priority.BOTTOM
 
     override fun startInWriteAction(): Boolean = false
 
-    override fun getText(): String = DetektBundle.message("detekt.actions.addToBaseline", finding.ruleId)
+    override fun getText(): String = DetektBundle.message("detekt.actions.addToBaseline", finding.ruleId, finding.line)
 
     override fun getFamilyName(): String = DETEKT
 

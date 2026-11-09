@@ -76,6 +76,8 @@ class AnalysisRequest(
     val executor: ExecutorService?,
     val classpath: List<Path> = emptyList(),
     val jdkHome: Path? = null,
+    val onlyRuleSetId: String? = null,
+    val onlyRuleId: String? = null,
 )
 
 class AnalysisOutcome(

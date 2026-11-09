@@ -70,7 +70,7 @@
 
     <change-notes><![CDATA[
       <ul>
-        <li>2.5.0-2.5.2
+        <li>2.5.0-2.5.3
             <br>
             <ul>
                 <li>Based on detekt 2.0.0-alpha6</li>

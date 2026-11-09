@@ -19,6 +19,7 @@ import io.gitlab.arturbosch.detekt.idea.engine.api.DetektEngine
 import io.gitlab.arturbosch.detekt.idea.engine.api.FixTemplate
 import io.gitlab.arturbosch.detekt.idea.engine.api.RuleDescription
 import io.gitlab.arturbosch.detekt.idea.engine.api.RulesRequest
+import io.gitlab.arturbosch.detekt.idea.intention.RuleRef
 import io.gitlab.arturbosch.detekt.idea.util.DirectExecutor
 import io.gitlab.arturbosch.detekt.idea.util.SimpleAppendable
 import io.gitlab.arturbosch.detekt.idea.util.absoluteBaselinePath
@@ -84,7 +85,13 @@ class ConfiguredService(
         return messages
     }
 
-    private fun request(content: String, filename: String, autoCorrect: Boolean, compile: CompileContext): AnalysisRequest {
+    private fun request(
+        content: String,
+        filename: String,
+        autoCorrect: Boolean,
+        compile: CompileContext,
+        only: RuleRef?,
+    ): AnalysisRequest {
         val projectDir = project.guessProjectDir()?.canonicalPath?.let { Paths.get(it) }
         val redirect = settings.redirectChannels
         return AnalysisRequest(
@@ -103,6 +110,8 @@ class ConfiguredService(
             executor = DirectExecutor(),
             classpath = compile.classpath,
             jdkHome = compile.jdkHome,
+            onlyRuleSetId = only?.ruleSetId,
+            onlyRuleId = only?.ruleId,
         )
     }
 
@@ -172,7 +181,7 @@ class ConfiguredService(
         engine.suppressInBaseline(requireNotNull(baseline()), baselineId)
     }
 
-    fun execute(file: PsiFile, autoCorrect: Boolean): AnalysisOutcome {
+    fun execute(file: PsiFile, autoCorrect: Boolean, only: RuleRef? = null): AnalysisOutcome {
         val pathToAnalyze = file.virtualFile?.canonicalPath ?: return AnalysisOutcome.EMPTY
         if (!Files.isRegularFile(Path(pathToAnalyze))) return AnalysisOutcome.EMPTY
         val sourceRoot = {
@@ -192,7 +201,7 @@ class ConfiguredService(
             }
             .getOrThrow()
         val compile = compileContext(file)
-        return runCatching { execute(content, pathToAnalyze, autoCorrect, compile) }
+        return runCatching { execute(content, pathToAnalyze, autoCorrect, compile, only) }
             .onFailure { logErrorIfAllowed(it, "Unexpected error while running detekt analysis") }
             .getOrDefault(AnalysisOutcome.EMPTY)
     }
@@ -209,12 +218,13 @@ class ConfiguredService(
         filename: String,
         autoCorrect: Boolean,
         compile: CompileContext = CompileContext.NONE,
+        only: RuleRef? = null,
     ): AnalysisOutcome {
         val normalizedFilename = filename.replace('\\', '/')
         if (SPECIAL_FILES_TO_IGNORE.any { normalizedFilename.startsWith(it) }) {
             return AnalysisOutcome.EMPTY
         }
-        return engine.analyze(request(fileContent, filename, autoCorrect, compile))
+        return engine.analyze(request(fileContent, filename, autoCorrect, compile, only))
     }
 }
 
