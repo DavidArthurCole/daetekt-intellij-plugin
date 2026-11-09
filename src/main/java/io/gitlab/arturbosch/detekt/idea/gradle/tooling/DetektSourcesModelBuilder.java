@@ -36,7 +36,7 @@ public final class DetektSourcesModelBuilder extends AbstractModelBuilderService
                 });
             }
         }
-        return directories.isEmpty() ? null : new DetektSourcesModel(new ArrayList<>(directories));
+        return directories.isEmpty() ? null : new DefaultDetektSourcesModel(new ArrayList<>(directories));
     }
 
     private static boolean isDetektTask(Class<?> type) {
