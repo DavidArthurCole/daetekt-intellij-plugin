@@ -5,7 +5,6 @@ import com.intellij.openapi.util.Computable
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.progress.ProcessCanceledException
-import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.roots.ModuleRootManager
@@ -34,8 +33,6 @@ import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.path.Path
 import kotlin.io.path.exists
-
-private const val MAX_CORRECTION_PASSES = 10
 
 internal fun jarsIn(directory: Path?): List<Path> {
     if (directory == null || !Files.isDirectory(directory)) {
@@ -217,35 +214,9 @@ class ConfiguredService(
             }
             .getOrThrow()
         val compile = compileContext(file)
-        return runCatching {
-            if (autoCorrect) {
-                correctUntilStable(content, pathToAnalyze, compile, only)
-            } else {
-                execute(content, pathToAnalyze, false, compile, only)
-            }
-        }
+        return runCatching { execute(content, pathToAnalyze, autoCorrect, compile, only) }
             .onFailure { logErrorIfAllowed(it, "Unexpected error while running detekt analysis") }
             .getOrDefault(AnalysisOutcome.EMPTY)
-    }
-
-    private fun correctUntilStable(
-        content: String,
-        filename: String,
-        compile: CompileContext,
-        only: RuleRef?,
-    ): AnalysisOutcome {
-        var current = content
-        var last = AnalysisOutcome.EMPTY
-        for (pass in 1..MAX_CORRECTION_PASSES) {
-            ProgressManager.checkCanceled()
-            last = runCatching { execute(current, filename, true, compile, only) }
-                .onFailure { logErrorIfAllowed(it, "detekt failed on correction pass $pass; keeping earlier passes") }
-                .getOrNull() ?: break
-            val next = last.correctedContent
-            if (last.configProblem != null || next == null || next == current) break
-            current = next
-        }
-        return AnalysisOutcome(last.findings, current.takeIf { it != content }, last.configProblem)
     }
 
     private fun logErrorIfAllowed(error: Throwable, message: String) {

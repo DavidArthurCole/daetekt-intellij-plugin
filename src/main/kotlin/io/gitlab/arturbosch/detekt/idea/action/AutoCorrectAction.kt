@@ -50,7 +50,7 @@ class AutoCorrectAction : AnAction(PluginUtils.pluginIcon()) {
             .getOrThrow()
     }
 
-    internal fun runAction(project: Project, psiFile: PsiFile, only: RuleRef? = null) {
+    internal fun runAction(project: Project, psiFile: PsiFile, only: RuleRef? = null, pass: Int = 1, undoGroup: String = "daetekt.autoCorrect.${System.nanoTime()}") {
         val documents = PsiDocumentManager.getInstance(project)
         val document = documents.getDocument(psiFile) ?: return
         documents.commitDocument(document)
@@ -58,6 +58,7 @@ class AutoCorrectAction : AnAction(PluginUtils.pluginIcon()) {
         val title = DetektBundle.message("detekt.actions.autoCorrect")
         object : Task.Backgroundable(project, title, true) {
             override fun run(indicator: ProgressIndicator) {
+                indicator.text = DetektBundle.message("detekt.actions.autoCorrectPass", pass)
                 val service = ConfiguredService(project)
                 val problems = service.validate()
                 if (problems.isNotEmpty()) {
@@ -67,7 +68,7 @@ class AutoCorrectAction : AnAction(PluginUtils.pluginIcon()) {
                 val outcome = service.execute(psiFile, autoCorrect = true, only = only)
                 val corrected = outcome.correctedContent
                 if (corrected == null) {
-                    if (only != null) {
+                    if (only != null && pass == 1) {
                         val stillReported = outcome.findings.any { it.ruleId == only.ruleId && (only.line == null || it.line == only.line) }
                         val key = if (stillReported) "detekt.actions.autoCorrectDeclined" else "detekt.actions.autoCorrectNotReported"
                         showNotification(title, DetektBundle.message(key, only.ruleId, only.line ?: "-"), project)
@@ -76,15 +77,18 @@ class AutoCorrectAction : AnAction(PluginUtils.pluginIcon()) {
                 }
                 ApplicationManager.getApplication().invokeLater({
                     if (document.modificationStamp != stamp) return@invokeLater
-                    WriteCommandAction.runWriteCommandAction(project, title, null, {
+                    WriteCommandAction.runWriteCommandAction(project, title, undoGroup, {
                         replaceChangedRange(document, corrected)
                         documents.commitDocument(document)
                     }, psiFile)
+                    if (pass < MAX_CORRECTION_PASSES) runAction(project, psiFile, only, pass + 1, undoGroup)
                 }, project.disposed)
             }
         }.queue()
     }
 }
+
+private const val MAX_CORRECTION_PASSES = 10
 
 internal fun replaceChangedRange(document: Document, corrected: String) {
     val current = document.charsSequence
