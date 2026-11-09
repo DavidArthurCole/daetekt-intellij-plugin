@@ -7,6 +7,9 @@ import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
+import com.intellij.openapi.roots.ModuleRootManager
+import com.intellij.openapi.roots.OrderEnumerator
+import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.psi.PsiFile
 import io.gitlab.arturbosch.detekt.idea.config.DetektPluginSettings
 import io.gitlab.arturbosch.detekt.idea.engine.EngineLoader
@@ -81,7 +84,7 @@ class ConfiguredService(
         return messages
     }
 
-    private fun request(content: String, filename: String, autoCorrect: Boolean): AnalysisRequest {
+    private fun request(content: String, filename: String, autoCorrect: Boolean, compile: CompileContext): AnalysisRequest {
         val projectDir = project.guessProjectDir()?.canonicalPath?.let { Paths.get(it) }
         val redirect = settings.redirectChannels
         return AnalysisRequest(
@@ -98,8 +101,25 @@ class ConfiguredService(
             outputChannel = if (redirect) SimpleAppendable { logger.info(it) } else null,
             errorChannel = if (redirect) SimpleAppendable { logger.warn(it) } else null,
             executor = DirectExecutor(),
+            classpath = compile.classpath,
+            jdkHome = compile.jdkHome,
         )
     }
+
+    private fun compileContext(file: PsiFile): CompileContext =
+        ApplicationManager.getApplication().runReadAction(Computable {
+            val virtualFile = file.virtualFile
+            val module = virtualFile?.let { project.getService(ProjectFileIndex::class.java)?.getModuleForFile(it) }
+            if (module == null) {
+                CompileContext.NONE
+            } else {
+                CompileContext(
+                    classpath = OrderEnumerator.orderEntries(module).recursively().withoutSdk().classes()
+                        .pathsList.pathList.map { Path(it) }.filter { Files.exists(it) },
+                    jdkHome = ModuleRootManager.getInstance(module).sdk?.homePath?.let { Path(it) },
+                )
+            }
+        })
 
     private fun configPaths(): List<Path> =
         settings.configurationFilePaths
@@ -155,7 +175,14 @@ class ConfiguredService(
     fun execute(file: PsiFile, autoCorrect: Boolean): AnalysisOutcome {
         val pathToAnalyze = file.virtualFile?.canonicalPath ?: return AnalysisOutcome.EMPTY
         if (!Files.isRegularFile(Path(pathToAnalyze))) return AnalysisOutcome.EMPTY
-        if (!DetektSources.getInstance(project).includes(Path(pathToAnalyze))) return AnalysisOutcome.EMPTY
+        val sourceRoot = {
+            ApplicationManager.getApplication().runReadAction(Computable {
+                file.virtualFile?.let { project.getService(ProjectFileIndex::class.java)?.getSourceRootForFile(it) }?.canonicalPath
+            })?.let(::Path)
+        }
+        if (!DetektSources.getInstance(project).includes(Path(pathToAnalyze), sourceRoot)) {
+            return AnalysisOutcome.EMPTY
+        }
         val content = runCatching { ApplicationManager.getApplication().runReadAction(Computable { file.text }) }
             .onFailure {
                 logErrorIfAllowed(
@@ -164,7 +191,8 @@ class ConfiguredService(
                 )
             }
             .getOrThrow()
-        return runCatching { execute(content, pathToAnalyze, autoCorrect) }
+        val compile = compileContext(file)
+        return runCatching { execute(content, pathToAnalyze, autoCorrect, compile) }
             .onFailure { logErrorIfAllowed(it, "Unexpected error while running detekt analysis") }
             .getOrDefault(AnalysisOutcome.EMPTY)
     }
@@ -176,11 +204,23 @@ class ConfiguredService(
         logger.error(message, error)
     }
 
-    fun execute(fileContent: String, filename: String, autoCorrect: Boolean): AnalysisOutcome {
+    fun execute(
+        fileContent: String,
+        filename: String,
+        autoCorrect: Boolean,
+        compile: CompileContext = CompileContext.NONE,
+    ): AnalysisOutcome {
         val normalizedFilename = filename.replace('\\', '/')
         if (SPECIAL_FILES_TO_IGNORE.any { normalizedFilename.startsWith(it) }) {
             return AnalysisOutcome.EMPTY
         }
-        return engine.analyze(request(fileContent, filename, autoCorrect))
+        return engine.analyze(request(fileContent, filename, autoCorrect, compile))
+    }
+}
+
+class CompileContext(val classpath: List<Path>, val jdkHome: Path?) {
+
+    companion object {
+        val NONE = CompileContext(emptyList(), null)
     }
 }

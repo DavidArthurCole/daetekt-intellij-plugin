@@ -74,6 +74,8 @@ class AnalysisRequest(
     val outputChannel: Appendable?,
     val errorChannel: Appendable?,
     val executor: ExecutorService?,
+    val classpath: List<Path> = emptyList(),
+    val jdkHome: Path? = null,
 )
 
 class AnalysisOutcome(

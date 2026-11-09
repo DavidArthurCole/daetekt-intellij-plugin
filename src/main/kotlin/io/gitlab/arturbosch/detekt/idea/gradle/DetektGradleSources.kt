@@ -17,7 +17,7 @@ import org.gradle.tooling.model.idea.IdeaModule
 import org.jetbrains.plugins.gradle.service.project.AbstractProjectResolverExtension
 import org.jetbrains.plugins.gradle.util.GradleConstants
 
-class DetektSourcesData(var directories: List<String> = emptyList())
+class DetektSourcesData(var directories: List<String> = emptyList(), var roots: List<String> = emptyList())
 
 val DETEKT_SOURCES_KEY: Key<DetektSourcesData> = Key.create(DetektSourcesData::class.java, 1000)
 
@@ -29,7 +29,7 @@ class DetektGradleResolver : AbstractProjectResolverExtension() {
 
     override fun populateModuleExtraModels(gradleModule: IdeaModule, ideModule: DataNode<ModuleData>) {
         resolverCtx.getExtraProject(gradleModule, DetektSourcesModel::class.java)?.let {
-            ideModule.createChild(DETEKT_SOURCES_KEY, DetektSourcesData(it.directories.toList()))
+            ideModule.createChild(DETEKT_SOURCES_KEY, DetektSourcesData(it.directories.toList(), it.roots.toList()))
         }
         super.populateModuleExtraModels(gradleModule, ideModule)
     }
@@ -45,7 +45,10 @@ class DetektSourcesDataService : AbstractProjectDataService<DetektSourcesData, V
         project: Project,
         modelsProvider: IdeModifiableModelsProvider,
     ) {
-        DetektSources.getInstance(project).update(toImport.flatMap { it.data.directories })
+        DetektSources.getInstance(project).update(
+            toImport.flatMap { it.data.directories },
+            toImport.flatMap { it.data.roots },
+        )
     }
 }
 
@@ -65,10 +68,9 @@ class DetektGradleStartup : ProjectActivity {
 }
 
 private fun refreshDetektSources(project: Project) {
-    val directories = ProjectDataManager.getInstance()
+    val nodes = ProjectDataManager.getInstance()
         .getExternalProjectsData(project, GradleConstants.SYSTEM_ID)
         .mapNotNull { it.externalProjectStructure }
         .flatMap { ExternalSystemApiUtil.findAllRecursively(it, DETEKT_SOURCES_KEY) }
-        .flatMap { it.data.directories }
-    DetektSources.getInstance(project).update(directories)
+    DetektSources.getInstance(project).update(nodes.flatMap { it.data.directories }, nodes.flatMap { it.data.roots })
 }

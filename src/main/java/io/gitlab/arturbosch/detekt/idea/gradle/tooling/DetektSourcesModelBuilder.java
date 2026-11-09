@@ -6,6 +6,7 @@ import org.gradle.api.tasks.SourceTask;
 import org.jetbrains.plugins.gradle.tooling.AbstractModelBuilderService;
 import org.jetbrains.plugins.gradle.tooling.ModelBuilderContext;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.TreeSet;
@@ -22,6 +23,7 @@ public final class DetektSourcesModelBuilder extends AbstractModelBuilderService
     @Override
     public Object buildAll(String modelName, Project project, ModelBuilderContext context) {
         Set<String> directories = new TreeSet<>();
+        Set<String> roots = new TreeSet<>();
         for (String name : project.getTasks().getNames()) {
             if (!name.startsWith("detekt")) {
                 continue;
@@ -32,11 +34,20 @@ public final class DetektSourcesModelBuilder extends AbstractModelBuilderService
                     String fileName = details.getName();
                     if (!details.isDirectory() && (fileName.endsWith(".kt") || fileName.endsWith(".kts"))) {
                         directories.add(details.getFile().getParentFile().getAbsolutePath());
+                        roots.add(rootOf(details.getFile(), details.getRelativePath().getSegments().length));
                     }
                 });
             }
         }
-        return directories.isEmpty() ? null : new DefaultDetektSourcesModel(new ArrayList<>(directories));
+        return directories.isEmpty() ? null : new DefaultDetektSourcesModel(new ArrayList<>(directories), new ArrayList<>(roots));
+    }
+
+    private static String rootOf(File file, int depth) {
+        File root = file;
+        for (int i = 0; i < depth && root.getParentFile() != null; i++) {
+            root = root.getParentFile();
+        }
+        return root.getAbsolutePath();
     }
 
     private static boolean isDetektTask(Class<?> type) {

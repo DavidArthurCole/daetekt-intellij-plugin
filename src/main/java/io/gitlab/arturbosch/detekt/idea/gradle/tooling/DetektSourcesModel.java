@@ -5,4 +5,6 @@ import java.util.List;
 public interface DetektSourcesModel {
 
     List<String> getDirectories();
+
+    List<String> getRoots();
 }

@@ -8,6 +8,7 @@ import dev.detekt.api.Rule
 import dev.detekt.api.RuleSetProvider
 import dev.detekt.api.Severity
 import dev.detekt.api.suppressed
+import dev.detekt.tooling.api.AnalysisMode
 import dev.detekt.tooling.api.BaselineProvider
 import dev.detekt.tooling.api.DetektProvider
 import dev.detekt.tooling.api.InvalidConfig
@@ -222,6 +223,11 @@ class DefaultDetektEngine : DetektEngine {
         project {
             basePath = workspace
             inputPaths = listOf(mirror)
+            analysisMode = if (request.classpath.isEmpty()) AnalysisMode.light else AnalysisMode.full
+        }
+        compiler {
+            classpath = request.classpath
+            jdkHome = request.jdkHome
         }
         rules {
             autoCorrect = request.autoCorrect
