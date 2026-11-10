@@ -66,6 +66,11 @@ class AutoCorrectAction : AnAction(PluginUtils.pluginIcon()) {
                     return
                 }
                 val outcome = service.execute(psiFile, autoCorrect = true, only = only)
+                val failure = outcome.failure
+                if (failure != null) {
+                    showNotification(title, failure, project)
+                    return
+                }
                 val corrected = outcome.correctedContent
                 if (corrected == null) {
                     if (only != null && pass == 1) {

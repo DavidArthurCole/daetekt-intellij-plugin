@@ -27,10 +27,14 @@ import io.gitlab.arturbosch.detekt.idea.util.DirectExecutor
 import io.gitlab.arturbosch.detekt.idea.util.SimpleAppendable
 import io.gitlab.arturbosch.detekt.idea.util.absoluteBaselinePath
 import java.io.File
+import java.io.FileNotFoundException
+import java.nio.file.NoSuchFileException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicReference
+
+private const val CLASSPATH_RACE_ATTEMPTS = 2
 import kotlin.io.path.Path
 import kotlin.io.path.exists
 
@@ -203,7 +207,7 @@ class ConfiguredService(
             })?.let(::Path)
         }
         if (!DetektSources.getInstance(project).includes(Path(pathToAnalyze), sourceRoot)) {
-            return AnalysisOutcome.EMPTY
+            return failed(DetektBundle.message("detekt.analysis.outsideSources"))
         }
         val content = runCatching { ApplicationManager.getApplication().runReadAction(Computable { file.text }) }
             .onFailure {
@@ -214,10 +218,38 @@ class ConfiguredService(
             }
             .getOrThrow()
         val compile = compileContext(file)
-        return runCatching { execute(content, pathToAnalyze, autoCorrect, compile, only) }
-            .onFailure { logErrorIfAllowed(it, "Unexpected error while running detekt analysis") }
-            .getOrDefault(AnalysisOutcome.EMPTY)
+        repeat(CLASSPATH_RACE_ATTEMPTS) { attempt ->
+            val result = runCatching { execute(content, pathToAnalyze, autoCorrect, compile, only) }
+            val error = result.exceptionOrNull() ?: return result.getOrThrow()
+            if (error is ProcessCanceledException) throw error
+            if (!error.touchesClasspath(compile)) {
+                logErrorIfAllowed(error, "Unexpected error while running detekt analysis")
+                return failed(DetektBundle.message("detekt.analysis.failed", error.rootMessage()))
+            }
+            logger.info("detekt run ${attempt + 1} hit a classpath file that changed during analysis", error)
+        }
+        return failed(DetektBundle.message("detekt.analysis.classpathChanged"))
     }
+
+    private fun failed(reason: String) = AnalysisOutcome(emptyList(), null, null, reason)
+
+    private fun Throwable.rootMessage(): String =
+        generateSequence(this) { it.cause }.last().let { it.message ?: it.javaClass.simpleName }
+
+    fun previewCorrection(file: PsiFile, content: String, only: RuleRef?): String? {
+        val path = file.virtualFile?.canonicalPath ?: return null
+        val compile = compileContext(file)
+        return runCatching { execute(content, path, true, compile, only).correctedContent }
+            .onFailure { if (it is ProcessCanceledException) throw it }
+            .getOrNull()
+    }
+
+    private fun Throwable.touchesClasspath(compile: CompileContext): Boolean =
+        generateSequence(this) { it.cause }.any { error ->
+            val missing = ((error as? NoSuchFileException)?.file ?: (error as? FileNotFoundException)?.message)
+                ?.replace('/', '\\')
+            missing != null && compile.classpath.any { missing.startsWith(it.toString().replace('/', '\\'), ignoreCase = true) }
+        }
 
     private fun logErrorIfAllowed(error: Throwable, message: String) {
         if (error is ProcessCanceledException) {

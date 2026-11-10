@@ -3,6 +3,8 @@ package io.gitlab.arturbosch.detekt.idea.intention
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.codeInsight.intention.IntentionAction
 import com.intellij.codeInsight.intention.PriorityAction
+import com.intellij.codeInsight.intention.preview.IntentionPreviewInfo
+import com.intellij.openapi.util.text.HtmlChunk
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
@@ -22,7 +24,14 @@ class AddToBaselineAction(private val finding: EngineFinding) : IntentionAction,
 
     override fun startInWriteAction(): Boolean = false
 
-    override fun getText(): String = DetektBundle.message("detekt.actions.addToBaseline", finding.ruleId, finding.line)
+    override fun getText(): String = DetektBundle.message("detekt.actions.addToBaseline", finding.ruleId)
+
+    override fun generatePreview(project: Project, editor: Editor, file: PsiFile): IntentionPreviewInfo {
+        val baseline = absoluteBaselinePath(project, project.service<DetektPluginSettings>()) ?: return IntentionPreviewInfo.EMPTY
+        return IntentionPreviewInfo.Html(
+            HtmlChunk.text(DetektBundle.message("detekt.actions.baselinePreview", finding.baselineId, baseline.fileName.toString()))
+        )
+    }
 
     override fun getFamilyName(): String = DETEKT
 

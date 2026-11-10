@@ -84,6 +84,7 @@ class AnalysisOutcome(
     val findings: List<EngineFinding>,
     val correctedContent: String?,
     val configProblem: String?,
+    val failure: String? = null,
 ) {
 
     companion object {

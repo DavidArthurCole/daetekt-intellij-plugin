@@ -2,6 +2,8 @@ package io.gitlab.arturbosch.detekt.idea.intention
 
 import com.intellij.codeInsight.intention.IntentionAction
 import com.intellij.codeInsight.intention.PriorityAction
+import com.intellij.codeInsight.intention.preview.IntentionPreviewInfo
+import io.gitlab.arturbosch.detekt.idea.ConfiguredService
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiFile
@@ -29,8 +31,17 @@ class AutoCorrectIntention(private val finding: EngineFinding? = null) : Intenti
     override fun isAvailable(project: Project, editor: Editor, file: PsiFile): Boolean = file.isWritable
 
     override fun invoke(project: Project, editor: Editor, file: PsiFile) {
-        AutoCorrectAction().runAction(project, file, finding?.let { RuleRef(it.ruleSetId, it.ruleId, it.line) })
+        AutoCorrectAction().runAction(project, file, ruleRef())
     }
+
+    override fun generatePreview(project: Project, editor: Editor, file: PsiFile): IntentionPreviewInfo {
+        val original = file.text
+        val corrected = ConfiguredService(project).previewCorrection(file.originalFile, original, ruleRef())
+            ?: return IntentionPreviewInfo.EMPTY
+        return IntentionPreviewInfo.CustomDiff(file.fileType, original, corrected)
+    }
+
+    private fun ruleRef(): RuleRef? = finding?.let { RuleRef(it.ruleSetId, it.ruleId, it.line) }
 
     private fun summary(message: String): String {
         val line = message.lineSequence().first().trim()

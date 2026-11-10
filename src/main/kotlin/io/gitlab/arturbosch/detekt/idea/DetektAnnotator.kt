@@ -14,7 +14,9 @@ import io.gitlab.arturbosch.detekt.idea.engine.api.FixTemplate
 import io.gitlab.arturbosch.detekt.idea.intention.AddToBaselineAction
 import io.gitlab.arturbosch.detekt.idea.intention.ApplyFixTemplateAction
 import io.gitlab.arturbosch.detekt.idea.intention.AutoCorrectIntention
+import io.gitlab.arturbosch.detekt.idea.intention.SuppressWithAnnotationAction
 import io.gitlab.arturbosch.detekt.idea.intention.editWithin
+import io.gitlab.arturbosch.detekt.idea.intention.suppressTargetName
 import io.gitlab.arturbosch.detekt.idea.util.clearShownProblems
 import io.gitlab.arturbosch.detekt.idea.util.isDetektEnabled
 import io.gitlab.arturbosch.detekt.idea.util.showNotificationOnce
@@ -85,6 +87,9 @@ class DetektAnnotator : ExternalAnnotator<PsiFile, DetektAnnotations>() {
             }
             annotationBuilder.withFix(AutoCorrectIntention(finding))
             annotationBuilder.withFix(AutoCorrectIntention())
+            annotationBuilder.withFix(
+                SuppressWithAnnotationAction(finding.ruleId, textRange.startOffset, suppressTargetName(file, textRange.startOffset))
+            )
             if (finding.ruleSetId != KTLINT_RULE_SET_ID) {
                 annotationBuilder.withFix(AddToBaselineAction(finding))
             }
