@@ -13,6 +13,7 @@ import com.intellij.psi.PsiFile
 import io.gitlab.arturbosch.detekt.idea.ConfiguredService
 import io.gitlab.arturbosch.detekt.idea.DETEKT
 import io.gitlab.arturbosch.detekt.idea.DetektBundle
+import io.gitlab.arturbosch.detekt.idea.DetektResults
 import io.gitlab.arturbosch.detekt.idea.config.DetektPluginSettings
 import io.gitlab.arturbosch.detekt.idea.engine.api.EngineFinding
 import io.gitlab.arturbosch.detekt.idea.util.absoluteBaselinePath
@@ -44,6 +45,7 @@ class AddToBaselineAction(private val finding: EngineFinding) : IntentionAction,
         val application = ApplicationManager.getApplication()
         application.executeOnPooledThread {
             ConfiguredService(project).suppressInBaseline(finding.baselineId)
+            DetektResults.invalidate()
             application.invokeLater({ DaemonCodeAnalyzer.getInstance(project).restart(file) }, project.disposed)
         }
     }

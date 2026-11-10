@@ -4,6 +4,7 @@ import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.ExternalAnnotator
 import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.openapi.components.service
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiFile
 import io.gitlab.arturbosch.detekt.idea.config.DetektPluginSettings
@@ -16,7 +17,6 @@ import io.gitlab.arturbosch.detekt.idea.intention.ApplyFixTemplateAction
 import io.gitlab.arturbosch.detekt.idea.intention.AutoCorrectIntention
 import io.gitlab.arturbosch.detekt.idea.intention.SuppressWithAnnotationAction
 import io.gitlab.arturbosch.detekt.idea.intention.editWithin
-import io.gitlab.arturbosch.detekt.idea.intention.suppressTargetName
 import io.gitlab.arturbosch.detekt.idea.util.clearShownProblems
 import io.gitlab.arturbosch.detekt.idea.util.isDetektEnabled
 import io.gitlab.arturbosch.detekt.idea.util.showNotificationOnce
@@ -40,7 +40,13 @@ class DetektAnnotator : ExternalAnnotator<PsiFile, DetektAnnotations>() {
         if (!project.isDetektEnabled() || !isKotlinFile(collectedInfo)) {
             return DetektAnnotations.EMPTY
         }
+        val document = collectedInfo.viewProvider.document
+        val content = document?.text ?: collectedInfo.text
+        val stamp = document?.modificationStamp ?: collectedInfo.modificationStamp
+        return DetektResults.resultFor(collectedInfo, stamp) { analyze(project, collectedInfo, content) }
+    }
 
+    private fun analyze(project: Project, file: PsiFile, content: String): DetektAnnotations {
         val service = ConfiguredService(project)
         val problems = service.validate()
         if (problems.isNotEmpty()) {
@@ -48,7 +54,7 @@ class DetektAnnotator : ExternalAnnotator<PsiFile, DetektAnnotations>() {
             return DetektAnnotations.EMPTY
         }
 
-        val outcome = service.execute(collectedInfo, autoCorrect = false)
+        val outcome = service.execute(file, autoCorrect = false, providedContent = content)
         val configProblem = outcome.configProblem
         if (configProblem != null) {
             showNotificationOnce(listOf(configProblem), project)
@@ -87,9 +93,7 @@ class DetektAnnotator : ExternalAnnotator<PsiFile, DetektAnnotations>() {
             }
             annotationBuilder.withFix(AutoCorrectIntention(finding))
             annotationBuilder.withFix(AutoCorrectIntention())
-            annotationBuilder.withFix(
-                SuppressWithAnnotationAction(finding.ruleId, textRange.startOffset, suppressTargetName(file, textRange.startOffset))
-            )
+            annotationBuilder.withFix(SuppressWithAnnotationAction(finding.ruleId, textRange.startOffset, textRange == file.textRange))
             if (finding.ruleSetId != KTLINT_RULE_SET_ID) {
                 annotationBuilder.withFix(AddToBaselineAction(finding))
             }

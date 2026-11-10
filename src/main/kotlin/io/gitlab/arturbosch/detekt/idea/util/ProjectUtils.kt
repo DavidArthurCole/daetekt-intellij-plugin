@@ -17,6 +17,7 @@ import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.layout.ValidationInfoBuilder
 import io.gitlab.arturbosch.detekt.idea.DetektBundle
+import io.gitlab.arturbosch.detekt.idea.DetektResults
 import io.gitlab.arturbosch.detekt.idea.NOTIFICATION_GROUP_ID
 import io.gitlab.arturbosch.detekt.idea.config.DetektConfig
 import io.gitlab.arturbosch.detekt.idea.config.DetektPluginSettings
@@ -30,6 +31,7 @@ fun Project.settings(): DetektPluginSettings = service<DetektPluginSettings>()
 fun Project.isDetektEnabled(): Boolean = settings().enableDetekt
 
 fun restartAnalysis(project: Project) {
+    DetektResults.invalidate()
     val analyzer = DaemonCodeAnalyzer.getInstance(project)
     val psiManager = PsiManager.getInstance(project)
     FileEditorManager.getInstance(project).openFiles

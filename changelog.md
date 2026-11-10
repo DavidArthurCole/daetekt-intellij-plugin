@@ -1,6 +1,6 @@
 ### Changelog
 
-#### 2.5.0-2.5.4
+#### 2.5.0-2.5.5
 - Based on detekt 2.0.0-alpha6
 - Dropped support for IntelliJ earlier than 2024.3
 - Gradle, Java, and Kotlin updates

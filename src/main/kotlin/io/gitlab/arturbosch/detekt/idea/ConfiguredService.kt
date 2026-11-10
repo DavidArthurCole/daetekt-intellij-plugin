@@ -5,6 +5,7 @@ import com.intellij.openapi.util.Computable
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.progress.ProcessCanceledException
+import com.intellij.openapi.progress.util.ProgressIndicatorUtils
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.guessProjectDir
 import com.intellij.openapi.roots.ModuleRootManager
@@ -32,11 +33,17 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.Callable
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Future
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.path.Path
 import kotlin.io.path.exists
 
 private const val CLASSPATH_RACE_ATTEMPTS = 2
+private const val PREVIEW_CACHE_LIMIT = 32
+
+private val previewCache = ConcurrentHashMap<String, Future<String?>>()
 
 internal fun jarsIn(directory: Path?): List<Path> {
     if (directory == null || !Files.isDirectory(directory)) {
@@ -198,7 +205,7 @@ class ConfiguredService(
         engine.suppressInBaseline(requireNotNull(baseline()), baselineId)
     }
 
-    fun execute(file: PsiFile, autoCorrect: Boolean, only: RuleRef? = null): AnalysisOutcome {
+    fun execute(file: PsiFile, autoCorrect: Boolean, only: RuleRef? = null, providedContent: String? = null): AnalysisOutcome {
         val pathToAnalyze = file.virtualFile?.canonicalPath ?: return AnalysisOutcome.EMPTY
         if (!Files.isRegularFile(Path(pathToAnalyze))) return AnalysisOutcome.EMPTY
         val sourceRoot = {
@@ -209,7 +216,7 @@ class ConfiguredService(
         if (!DetektSources.getInstance(project).includes(Path(pathToAnalyze), sourceRoot)) {
             return failed(DetektBundle.message("detekt.analysis.outsideSources"))
         }
-        val content = runCatching { ApplicationManager.getApplication().runReadAction(Computable { file.text }) }
+        val content = providedContent ?: runCatching { ApplicationManager.getApplication().runReadAction(Computable { file.text }) }
             .onFailure {
                 logErrorIfAllowed(
                     it,
@@ -239,9 +246,14 @@ class ConfiguredService(
     fun previewCorrection(file: PsiFile, content: String, only: RuleRef?): String? {
         val path = file.virtualFile?.canonicalPath ?: return null
         val compile = compileContext(file)
-        return runCatching { execute(content, path, true, compile, only).correctedContent }
-            .onFailure { if (it is ProcessCanceledException) throw it }
-            .getOrNull()
+        val key = "$path|${only?.ruleSetId}:${only?.ruleId}|${content.length}|${content.hashCode()}"
+        if (previewCache.size > PREVIEW_CACHE_LIMIT) previewCache.clear()
+        val future = previewCache.computeIfAbsent(key) {
+            ApplicationManager.getApplication().executeOnPooledThread(Callable {
+                runCatching { execute(content, path, true, compile, only).correctedContent }.getOrNull()
+            })
+        }
+        return ProgressIndicatorUtils.awaitWithCheckCanceled(future)
     }
 
     private fun Throwable.touchesClasspath(compile: CompileContext): Boolean =
