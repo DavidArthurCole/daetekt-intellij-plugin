@@ -33,10 +33,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicReference
-
-private const val CLASSPATH_RACE_ATTEMPTS = 2
 import kotlin.io.path.Path
 import kotlin.io.path.exists
+
+private const val CLASSPATH_RACE_ATTEMPTS = 2
 
 internal fun jarsIn(directory: Path?): List<Path> {
     if (directory == null || !Files.isDirectory(directory)) {
