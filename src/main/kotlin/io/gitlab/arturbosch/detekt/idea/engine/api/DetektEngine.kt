@@ -85,6 +85,7 @@ class AnalysisOutcome(
     val correctedContent: String?,
     val configProblem: String?,
     val failure: String? = null,
+    val retryable: Boolean = false,
 ) {
 
     companion object {

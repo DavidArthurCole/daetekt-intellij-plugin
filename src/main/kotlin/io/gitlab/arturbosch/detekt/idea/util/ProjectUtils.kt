@@ -12,6 +12,7 @@ import com.intellij.openapi.options.newEditor.SettingsDialog
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
+import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
@@ -22,6 +23,8 @@ import io.gitlab.arturbosch.detekt.idea.NOTIFICATION_GROUP_ID
 import io.gitlab.arturbosch.detekt.idea.config.DetektConfig
 import io.gitlab.arturbosch.detekt.idea.config.DetektPluginSettings
 import java.io.File
+import java.lang.reflect.InvocationTargetException
+import java.lang.reflect.Method
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.absolute
@@ -30,13 +33,33 @@ fun Project.settings(): DetektPluginSettings = service<DetektPluginSettings>()
 
 fun Project.isDetektEnabled(): Boolean = settings().enableDetekt
 
+private val restartWithReason: Method? = runCatching {
+    DaemonCodeAnalyzer::class.java.getMethod("restart", PsiFile::class.java, Any::class.java)
+}.getOrNull()
+
+private val restartWithoutReason: Method by lazy {
+    DaemonCodeAnalyzer::class.java.getMethod("restart", PsiFile::class.java)
+}
+
+fun restartHighlighting(file: PsiFile, reason: String) {
+    val analyzer = DaemonCodeAnalyzer.getInstance(file.project)
+    try {
+        if (restartWithReason != null) {
+            restartWithReason.invoke(analyzer, file, reason)
+        } else {
+            restartWithoutReason.invoke(analyzer, file)
+        }
+    } catch (e: InvocationTargetException) {
+        throw e.targetException
+    }
+}
+
 fun restartAnalysis(project: Project) {
     DetektResults.invalidate()
-    val analyzer = DaemonCodeAnalyzer.getInstance(project)
     val psiManager = PsiManager.getInstance(project)
     FileEditorManager.getInstance(project).openFiles
         .mapNotNull { psiManager.findFile(it) }
-        .forEach { analyzer.restart(it) }
+        .forEach { restartHighlighting(it, "detekt settings changed") }
 }
 
 fun absolutePath(project: Project, path: String): String {

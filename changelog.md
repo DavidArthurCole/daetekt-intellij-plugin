@@ -1,5 +1,10 @@
 ### Changelog
 
+#### 2.5.6
+- Updated + expanded `Tools` submenu (Renamed `detekt` => `daetekt`)
+- Added bespoke logger + log file for plugin
+- Addressed performance issues with large projects
+
 #### 2.5.0-2.5.5
 - Based on detekt 2.0.0-alpha6
 - Dropped support for IntelliJ earlier than 2024.3

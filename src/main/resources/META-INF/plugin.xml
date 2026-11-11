@@ -49,10 +49,9 @@
                 text="Enable Background Analysis"
                 description="Shortcut to enable detekt through an action instead of the settings menu."/>
         <group id="io.gitlab.arturbosch.detekt.idea.action.RunDetektMenuGroup"
-               text="Run detekt"
+               text="daetekt"
                popup="true"
                class="io.gitlab.arturbosch.detekt.idea.action.RunDetektMenuGroup">
-            <add-to-group group-id="ToolsMenu" anchor="last"/>
             <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
             <add-to-group group-id="ChangesViewPopupMenu" anchor="last"/>
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
@@ -66,10 +65,47 @@
                     popup="true"
                     text="AutoCorrect by detekt Rules"/>
         </group>
+        <group id="daetekt.ToolsMenu"
+               text="daetekt"
+               popup="true"
+               icon="/META-INF/pluginIconSmall.svg">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+
+            <reference ref="io.gitlab.arturbosch.detekt.idea.menu.analyze"/>
+            <reference ref="io.gitlab.arturbosch.detekt.idea.menu.autocorrect"/>
+            <separator/>
+            <reference ref="io.gitlab.arturbosch.detekt.idea.action.EnableBackgroundAnalysisAction"/>
+            <action id="daetekt.RestartAnalysis"
+                    class="io.gitlab.arturbosch.detekt.idea.action.RestartAnalysisAction"
+                    text="Restart Analysis"
+                    description="Drop cached detekt results and re-analyze the open files"/>
+            <separator/>
+            <group id="daetekt.DocsGroup"/>
+            <separator/>
+            <action id="daetekt.ShowTimings"
+                    class="io.gitlab.arturbosch.detekt.idea.action.ShowTimingsAction"
+                    text="Show Analysis Timings"
+                    description="Summarize how long recent detekt runs took"/>
+            <action id="daetekt.OpenLog"
+                    class="io.gitlab.arturbosch.detekt.idea.action.OpenLogAction"
+                    text="Open Log File"
+                    description="Open daetekt.log in the editor"/>
+            <separator/>
+            <action id="daetekt.OpenSettings"
+                    class="io.gitlab.arturbosch.detekt.idea.action.OpenSettingsAction"
+                    text="Settings..."/>
+        </group>
     </actions>
 
     <change-notes><![CDATA[
       <ul>
+        <li>2.5.6
+            <ul>
+                <li>Updated + expanded `Tools` submenu (Renamed `detekt` => `daetekt`)</li>
+                <li>Added bespoke logger + log file for plugin</li>
+                <li>Addressed performance issues with large projects</li>
+            </ul>
+        </li>
         <li>2.5.0-2.5.5
             <br>
             <ul>

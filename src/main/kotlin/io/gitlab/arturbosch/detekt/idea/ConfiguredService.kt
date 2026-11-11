@@ -24,7 +24,9 @@ import io.gitlab.arturbosch.detekt.idea.engine.api.FixTemplate
 import io.gitlab.arturbosch.detekt.idea.engine.api.RuleDescription
 import io.gitlab.arturbosch.detekt.idea.engine.api.RulesRequest
 import io.gitlab.arturbosch.detekt.idea.intention.RuleRef
+import io.gitlab.arturbosch.detekt.idea.util.DetektLog
 import io.gitlab.arturbosch.detekt.idea.util.DirectExecutor
+import io.gitlab.arturbosch.detekt.idea.util.RunTiming
 import io.gitlab.arturbosch.detekt.idea.util.SimpleAppendable
 import io.gitlab.arturbosch.detekt.idea.util.absoluteBaselinePath
 import java.io.File
@@ -36,11 +38,13 @@ import java.nio.file.Paths
 import java.util.concurrent.Callable
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.path.Path
 import kotlin.io.path.exists
 
 private const val CLASSPATH_RACE_ATTEMPTS = 2
+private const val CLASSPATH_RACE_PAUSE_MILLIS = 2000L
 private const val PREVIEW_CACHE_LIMIT = 32
 
 private val previewCache = ConcurrentHashMap<String, Future<String?>>()
@@ -206,6 +210,20 @@ class ConfiguredService(
     }
 
     fun execute(file: PsiFile, autoCorrect: Boolean, only: RuleRef? = null, providedContent: String? = null): AnalysisOutcome {
+        val timing = RunTiming(file.virtualFile?.name.orEmpty(), autoCorrect, only?.ruleId)
+        return runCatching { execute(file, autoCorrect, only, providedContent, timing) }
+            .onSuccess(timing::finish)
+            .onFailure(timing::fail)
+            .getOrThrow()
+    }
+
+    private fun execute(
+        file: PsiFile,
+        autoCorrect: Boolean,
+        only: RuleRef?,
+        providedContent: String?,
+        timing: RunTiming,
+    ): AnalysisOutcome {
         val pathToAnalyze = file.virtualFile?.canonicalPath ?: return AnalysisOutcome.EMPTY
         if (!Files.isRegularFile(Path(pathToAnalyze))) return AnalysisOutcome.EMPTY
         val sourceRoot = {
@@ -225,7 +243,10 @@ class ConfiguredService(
             }
             .getOrThrow()
         val compile = compileContext(file)
+        timing.prepared(compile.classpath.size)
         repeat(CLASSPATH_RACE_ATTEMPTS) { attempt ->
+            timing.attempts = attempt + 1
+            if (attempt > 0) TimeUnit.MILLISECONDS.sleep(CLASSPATH_RACE_PAUSE_MILLIS)
             val result = runCatching { execute(content, pathToAnalyze, autoCorrect, compile, only) }
             val error = result.exceptionOrNull() ?: return result.getOrThrow()
             if (error is ProcessCanceledException) throw error
@@ -233,12 +254,13 @@ class ConfiguredService(
                 logErrorIfAllowed(error, "Unexpected error while running detekt analysis")
                 return failed(DetektBundle.message("detekt.analysis.failed", error.rootMessage()))
             }
-            logger.info("detekt run ${attempt + 1} hit a classpath file that changed during analysis", error)
+            DetektLog.warn("run ${attempt + 1} hit a classpath file that changed during analysis: ${error.rootMessage()}")
         }
-        return failed(DetektBundle.message("detekt.analysis.classpathChanged"))
+        return failed(DetektBundle.message("detekt.analysis.classpathChanged"), retryable = true)
     }
 
-    private fun failed(reason: String) = AnalysisOutcome(emptyList(), null, null, reason)
+    private fun failed(reason: String, retryable: Boolean = false) =
+        AnalysisOutcome(emptyList(), null, null, reason, retryable)
 
     private fun Throwable.rootMessage(): String =
         generateSequence(this) { it.cause }.last().let { it.message ?: it.javaClass.simpleName }

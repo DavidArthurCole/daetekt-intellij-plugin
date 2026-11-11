@@ -1,6 +1,5 @@
 package io.gitlab.arturbosch.detekt.idea.intention
 
-import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.codeInsight.intention.IntentionAction
 import com.intellij.codeInsight.intention.PriorityAction
 import com.intellij.codeInsight.intention.preview.IntentionPreviewInfo
@@ -17,6 +16,7 @@ import io.gitlab.arturbosch.detekt.idea.DetektResults
 import io.gitlab.arturbosch.detekt.idea.config.DetektPluginSettings
 import io.gitlab.arturbosch.detekt.idea.engine.api.EngineFinding
 import io.gitlab.arturbosch.detekt.idea.util.absoluteBaselinePath
+import io.gitlab.arturbosch.detekt.idea.util.restartHighlighting
 import kotlin.io.path.exists
 
 class AddToBaselineAction(private val finding: EngineFinding) : IntentionAction, PriorityAction {
@@ -46,7 +46,7 @@ class AddToBaselineAction(private val finding: EngineFinding) : IntentionAction,
         application.executeOnPooledThread {
             ConfiguredService(project).suppressInBaseline(finding.baselineId)
             DetektResults.invalidate()
-            application.invokeLater({ DaemonCodeAnalyzer.getInstance(project).restart(file) }, project.disposed)
+            application.invokeLater({ restartHighlighting(file, "detekt baseline changed") }, project.disposed)
         }
     }
 }

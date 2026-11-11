@@ -9,9 +9,13 @@
     <actions>
         <action id="io.gitlab.arturbosch.detekt.idea.webviews.ShowRulesAction"
                 class="io.gitlab.arturbosch.detekt.idea.webviews.ShowRulesAction"
-                text="Show detekt Rules Documentation"/>
+                text="Show detekt Rules Documentation">
+            <add-to-group group-id="daetekt.DocsGroup"/>
+        </action>
         <action id="io.gitlab.arturbosch.detekt.idea.webviews.ShowChangelogAction"
                 class="io.gitlab.arturbosch.detekt.idea.webviews.ShowChangelogAction"
-                text="Show detekt Changelog"/>
+                text="Show detekt Changelog">
+            <add-to-group group-id="daetekt.DocsGroup"/>
+        </action>
     </actions>
 </idea-plugin>

@@ -1,14 +1,14 @@
 package io.gitlab.arturbosch.detekt.idea.rules
 
+import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
-import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.Computable
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
 import io.gitlab.arturbosch.detekt.idea.engine.api.RuleExample
+import java.util.concurrent.Callable
 
 internal class SourceDoc(val rationale: String?, val examples: List<RuleExample>)
 
@@ -24,7 +24,11 @@ internal class RuleSource(val file: VirtualFile, val line: Int, val column: Int,
 
 internal fun locateRuleSources(project: Project, classNames: Collection<String>): Map<String, RuleSource> {
     if (classNames.isEmpty()) return emptyMap()
-    return DumbService.getInstance(project).runReadActionInSmartMode(Computable { locate(project, classNames.toSet()) })
+    val targets = classNames.toSet()
+    return ReadAction.nonBlocking(Callable { locate(project, targets) })
+        .inSmartMode(project)
+        .expireWith(project)
+        .executeSynchronously()
 }
 
 private fun locate(project: Project, classNames: Set<String>): Map<String, RuleSource> {

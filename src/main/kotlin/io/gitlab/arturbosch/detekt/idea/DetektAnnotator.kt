@@ -24,6 +24,7 @@ import io.gitlab.arturbosch.detekt.idea.util.showNotificationOnce
 class DetektAnnotations(
     val findings: List<EngineFinding>,
     val templates: Map<String, List<FixTemplate>>,
+    val retry: Boolean = false,
 ) {
 
     companion object {
@@ -60,6 +61,7 @@ class DetektAnnotator : ExternalAnnotator<PsiFile, DetektAnnotations>() {
             showNotificationOnce(listOf(configProblem), project)
             return DetektAnnotations.EMPTY
         }
+        if (outcome.retryable) return DetektAnnotations(emptyList(), emptyMap(), retry = true)
         clearShownProblems(project)
         val templates = if (outcome.findings.isEmpty()) emptyMap() else service.fixTemplates()
         return DetektAnnotations(outcome.findings, templates)

@@ -52,7 +52,7 @@ class DefaultDetektEngine : DetektEngine {
             val result = withEngineContext { provider.get(spec(request, workspace, mirror)).run() }
             when (val error = result.error) {
                 null -> Unit
-                is InvalidConfig -> return AnalysisOutcome(emptyList(), null, error.message ?: "Invalid detekt configuration.", null)
+                is InvalidConfig -> return AnalysisOutcome(emptyList(), null, error.message ?: "Invalid detekt configuration.", null, false)
                 is UnexpectedError -> throw error.cause
                 else -> throw error
             }
@@ -60,7 +60,7 @@ class DefaultDetektEngine : DetektEngine {
                 .filterNot { it.suppressed }
                 .map { it.toFinding() }
             val corrected = if (request.autoCorrect) mirror.readText().takeIf { it != request.content } else null
-            return AnalysisOutcome(findings, corrected, null, null)
+            return AnalysisOutcome(findings, corrected, null, null, false)
         } finally {
             workspace.toFile().deleteRecursively()
         }

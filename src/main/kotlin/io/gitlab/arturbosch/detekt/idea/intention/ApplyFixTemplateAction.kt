@@ -1,6 +1,5 @@
 package io.gitlab.arturbosch.detekt.idea.intention
 
-import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.codeInsight.intention.IntentionAction
 import com.intellij.codeInsight.intention.PriorityAction
 import com.intellij.openapi.editor.Editor
@@ -11,6 +10,7 @@ import com.intellij.psi.PsiFile
 import io.gitlab.arturbosch.detekt.idea.DETEKT
 import io.gitlab.arturbosch.detekt.idea.DetektBundle
 import io.gitlab.arturbosch.detekt.idea.engine.api.FixTemplate
+import io.gitlab.arturbosch.detekt.idea.util.restartHighlighting
 
 class ApplyFixTemplateAction(
     private val template: FixTemplate,
@@ -35,6 +35,6 @@ class ApplyFixTemplateAction(
         val edit = template.editWithin(document.charsSequence, range.startOffset, range.endOffset) ?: return
         document.replaceString(edit.start, edit.end, edit.replacement)
         PsiDocumentManager.getInstance(project).commitDocument(document)
-        DaemonCodeAnalyzer.getInstance(project).restart(file)
+        restartHighlighting(file, "detekt fix applied")
     }
 }
